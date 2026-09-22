@@ -2,9 +2,15 @@
    Кэширует только оболочку и обе подстраницы (HTML/манифест), чтобы приложение
    открывалось офлайн и мгновенно при плохой связи. Все обращения к
    Apps Script API (script.google.com) всегда идут в сеть — данные заказов,
-   остатков и касс не должны раздаваться из кэша. */
+   остатков и касс не должны раздаваться из кэша.
 
-var CACHE_NAME = 'dass-home-shell-v1';
+   v2: критически важно — fetch(event.request) без явного cache:'no-store'
+   может тихо вернуть response из HTTP-кэша браузера (не из Cache Storage),
+   из-за чего "network-first" на деле отдавал устаревший index.html/manager.html/
+   owner.html даже при рабочей сети (баг, из-за которого не работал вход).
+   Теперь запрос оболочки всегда идёт в сеть с явным обходом HTTP-кэша. */
+
+var CACHE_NAME = 'dass-home-shell-v2';
 var SHELL_FILES = [
   './',
   './index.html',
@@ -40,10 +46,20 @@ self.addEventListener('fetch', function (event) {
     return;
   }
 
-  /* Оболочка приложения: network-first, чтобы новая версия подхватывалась
-     сразу при наличии связи, а при офлайне — отдаём из кэша. */
+  /* Оболочка приложения: network-first с явным обходом HTTP-кэша браузера
+     (cache: 'no-store'), чтобы новая версия подхватывалась сразу при наличии
+     связи, а при офлайне — отдаём из Cache Storage. */
+  var freshRequest = new Request(event.request.url, {
+    method: 'GET',
+    headers: event.request.headers,
+    mode: 'same-origin',
+    credentials: event.request.credentials,
+    redirect: 'follow',
+    cache: 'no-store'
+  });
+
   event.respondWith(
-    fetch(event.request)
+    fetch(freshRequest)
       .then(function (resp) {
         var copy = resp.clone();
         caches.open(CACHE_NAME).then(function (cache) { cache.put(event.request, copy); });
