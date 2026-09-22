@@ -380,7 +380,7 @@
       <button class="theme-btn" data-density="compact" type="button">Компактный</button>
     </div>
   </div>
-  <div class="drawer-footer">DASS HOME · Учёт и продажи · v1.0<br>Полная версия работает на Google Sheets + Apps Script — этот экран визуальный макет.</div>
+  <div class="drawer-footer">DASS HOME · Учёт и продажи · v1.0<br>Данные из системы учёта DASS HOME.</div>
 </nav>
 <div class="coach-overlay" id="coachOverlay">
   <div class="coach-card">
@@ -417,25 +417,21 @@
     <div style="display:flex;gap:8px">
       <button class="icon-btn-lite" type="button" id="searchBtn" aria-label="Поиск"><svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
       <div class="notif-wrap">
-        <button class="icon-btn-lite" type="button" id="notifBtn" aria-label="Уведомления" aria-expanded="false"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3.5c-2.5 0-4 1.9-4 4.3v2.4l-1.3 2.3h10.6L14 10.2V7.8c0-2.4-1.5-4.3-4-4.3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.3 15c.3.8 1 1.3 1.7 1.3s1.4-.5 1.7-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="notif-dot"></span></button>
+        <button class="icon-btn-lite" type="button" id="notifBtn" aria-label="Уведомления" aria-expanded="false"><svg viewBox="0 0 20 20" fill="none"><path d="M10 3.5c-2.5 0-4 1.9-4 4.3v2.4l-1.3 2.3h10.6L14 10.2V7.8c0-2.4-1.5-4.3-4-4.3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M8.3 15c.3.8 1 1.3 1.7 1.3s1.4-.5 1.7-1.3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg><span class="notif-dot" id="notifDot" hidden></span></button>
         <div class="notif-dropdown" id="notifDropdown">
-          <h4 class="grp">Критично</h4>
-          <div class="notif-item crit"><span class="dot"></span><div><div class="t">3 заказа готовы к выдаче сегодня</div><div class="s">Заказы → Выдача</div></div></div>
-          <h4 class="grp">Информационно</h4>
-          <div class="notif-item"><span class="dot"></span><div><div class="t">Владелец подтвердил передачу 3 500 000 сум</div><div class="s">Касса</div></div></div>
-          <div class="notif-item"><span class="dot"></span><div><div class="t">Юсупова Д. закрыла долг по ORD-00209</div><div class="s">Вчера</div></div></div>
+          <div class="notif-item"><div><div class="t">Загрузка…</div></div></div>
         </div>
       </div>
       <button class="icon-btn-lite" type="button" aria-label="Профиль"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7.4" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4.3 16c.9-3 3.1-4.6 5.7-4.6s4.8 1.6 5.7 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     </div>
   </div>
 
-  <div class="offline-pill" id="offlinePill"><span class="dot"></span>Нет связи — операции сохранятся локально</div>
+  <div class="offline-pill" id="offlinePill"><span class="dot"></span>Нет связи — операции сейчас не проводятся</div>
 
   <div class="balance-card">
-    <div class="bc-top"><span class="bc-label">Касса (моя)</span><span class="bc-trend">+8%</span></div>
-    <div class="bc-value">3 950 000<span class="cur">сум</span></div>
-    <div class="bc-sub">Касса менеджера · на сегодня</div>
+    <div class="bc-top"><span class="bc-label">Касса менеджеров</span><span class="bc-trend" id="bcTrend" hidden></span></div>
+    <div class="bc-value"><span id="bcValue">…</span><span class="cur">сум</span></div>
+    <div class="bc-sub" id="bcSub">Общая касса менеджеров</div>
     <svg class="bc-spark" id="bcSpark" width="100%" height="24" viewBox="0 0 220 24" preserveAspectRatio="none"></svg>
     <div class="bc-divider"></div>
     <div class="bc-mini-row" id="bcMiniRow"></div>
@@ -457,9 +453,9 @@
 
   <main class="content-card">
     <div class="sheet-inner">
-      <div class="kpi-strip" id="kpiPending">
+      <div class="kpi-strip" id="kpiPending" hidden>
         <span class="ic-badge"><svg viewBox="0 0 20 20" fill="none"><rect x="3.5" y="4.5" width="13" height="11" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M3.5 7.5h13" stroke="currentColor" stroke-width="1.5"/></svg></span>
-        <span class="txt"><span class="l">3 · К выдаче сегодня</span><span class="s">Заказы → Выдача</span></span>
+        <span class="txt"><span class="l" id="kpiPendingText">—</span><span class="s">Заказы → Выдача</span></span>
         <svg class="chev" viewBox="0 0 20 20" fill="none"><path d="M7.5 5l5 5-5 5" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
 
@@ -537,12 +533,13 @@
     products: function(){ var self=this; return self._p || (self._p = apiGet('products').catch(function(e){ self._p=null; throw e; })); },
     clients: function(){ var self=this; return self._c || (self._c = apiGet('clients').catch(function(e){ self._c=null; throw e; })); },
     orders: function(){ var self=this; return self._o || (self._o = apiGet('orders').catch(function(e){ self._o=null; throw e; })); },
-    invalidate: function(){ this._p=null; this._c=null; this._o=null; }
+    invalidate: function(){ this._p=null; this._c=null; this._o=null; setTimeout(function(){ if(typeof refreshSummary==='function') refreshSummary(); }, 1500); }
   };
 
   document.getElementById('dateChip').textContent = 'Файл MANAGERS · ' + new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
   function skuTag(code,letter){ return '<span class="sku-tag"><span class="dot">'+letter+'</span>'+code+'</span>'; }
   function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function emptyState(title, sub, iconPath){
     iconPath = iconPath || '<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.5"/><path d="M7 10h6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>';
     return '<div class="empty-state"><span class="ic"><svg viewBox="0 0 20 20" fill="none">'+iconPath+'</svg></span><div class="t">'+title+'</div><div class="s">'+sub+'</div></div>';
@@ -608,8 +605,6 @@
       submodes:[{id:'priem', label:'Приход'}, {id:'rashod', label:'Расход'}]}
   ];
 
-  var IDPREFIX = {'zakaz-new':'ORD','zakaz-edit':'ORD','zakaz-cancel':'ORD','zakaz-vydacha':'ISS','zakaz-vozvrat':'RET','kassa-priem':'CM','kassa-rashod':'CM'};
-  var COUNTERS = {'ORD':219,'CM':1140,'ISS':341,'RET':28};
 
   var TEMPLATES = {};
 
@@ -1000,25 +995,32 @@
   }
 
   function renderKassaInfo(){
-    var prihod = 2490000, rashod = 300000+3500000, total = prihod+rashod;
-    var pP = Math.round(prihod/total*1000)/10, pR = Math.round(rashod/total*1000)/10;
-    var donutCss = 'background:conic-gradient(var(--accent) 0 '+pP+'%, var(--mono-accent) '+pP+'% 100%)';
-    var html = periodChipsHtml('kassaInfoPeriod')+'<div class="donut-wrap">'+
-      '<div class="donut" style="'+donutCss+'"><div class="donut-hole"><span class="v">'+fmt(total)+'</span><span class="l">Оборот, сум</span></div></div>'+
-      '<div class="legend">'+
-        '<div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span><span class="lbl">Приход</span><span class="val">'+pP+'%</span></div>'+
-        '<div class="legend-item"><span class="legend-dot" style="background:var(--mono-accent)"></span><span class="lbl">Расход</span><span class="val">'+pR+'%</span></div>'+
-      '</div></div>';
-    var moves = [
-      [true,'Оплата по ORD-00214','20.09',2490000],
-      [false,'Возврат по ORD-00175','19.09',300000],
-      [false,'Передача владельцу','17.09',3500000]
-    ];
-    html += (moves.length ? '<div class="tx-card">'+moves.map(function(m){ return txRow(m[0],m[1],m[2],m[3]); }).join('')+'</div>' : emptyState('Движений пока нет', 'Операции по вашей кассе появятся здесь'))+
-      '<p class="field-hint" style="margin-top:10px">Текущий остаток: 3 950 000 сум.</p>';
     var infoArea = document.getElementById('infoArea');
-    infoArea.innerHTML = html;
-    initPeriodChips(infoArea, 'kassaInfoPeriod');
+    infoArea.innerHTML = skeletonHtml(4);
+    apiGet('managerCash').then(function(data){
+      var inSum = 0, outSum = 0;
+      data.moves.forEach(function(m){ if(m.isIn) inSum += m.amount; else outSum += m.amount; });
+      var total = inSum + outSum;
+      var html = '';
+      if(total > 0){
+        var pP = Math.round(inSum/total*1000)/10, pR = Math.round((100-pP)*10)/10;
+        var donutCss = 'background:conic-gradient(var(--accent) 0 '+pP+'%, var(--mono-accent) '+pP+'% 100%)';
+        html += '<div class="donut-wrap">'+
+          '<div class="donut" style="'+donutCss+'"><div class="donut-hole"><span class="v">'+fmt(total)+'</span><span class="l">Оборот, сум</span></div></div>'+
+          '<div class="legend">'+
+            '<div class="legend-item"><span class="legend-dot" style="background:var(--accent)"></span><span class="lbl">Приход '+fmt(inSum)+'</span><span class="val">'+pP+'%</span></div>'+
+            '<div class="legend-item"><span class="legend-dot" style="background:var(--mono-accent)"></span><span class="lbl">Расход '+fmt(outSum)+'</span><span class="val">'+pR+'%</span></div>'+
+          '</div></div>';
+      }
+      html += data.moves.length
+        ? '<div class="tx-card">'+data.moves.map(function(m){
+            var d = new Date(m.date), sub = isNaN(d) ? '' : d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+            return txRow(m.isIn, esc(m.type+(m.doc ? ' · '+m.doc : '')), esc(sub+(m.comment ? ' · '+m.comment : '')), m.amount);
+          }).join('')+'</div>'
+        : emptyState('Движений пока нет', 'Операции по кассе менеджеров появятся здесь');
+      html += '<p class="field-hint" style="margin-top:10px">Текущий остаток: '+fmt(data.balance)+' сум. Показаны последние '+data.moves.length+' '+plural(data.moves.length,'движение','движения','движений')+'.</p>';
+      infoArea.innerHTML = html;
+    }).catch(function(e){ infoArea.innerHTML = emptyState('Не удалось загрузить кассу', e.message || 'Проверьте соединение и попробуйте ещё раз'); });
   }
   function txRow(isIn, title, sub, amount){
     var arrow = isIn ? '<path d="M10 15V5M6 9l4-4 4 4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>' : '<path d="M10 5v10M6 11l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>';
@@ -1064,7 +1066,7 @@
     if(mode==='ops'){ selectOpsNav(state.opsNavId); } else { selectInfoNav(state.infoNavId); }
   }
 
-  var NAV_BADGE = {ops:{zakaz:3}, info:{}};
+  var NAV_BADGE = {ops:{}, info:{}};   /* заполняется из API в refreshSummary() */
 
   var NAV_ICON_ID = {zakaz:'zakaz', kassa:'dengi', katalog:'katalog', 'moi-zakazy':'zakaz', 'kassa-info':'kassa', klienty:'klienty'};
   function buildTabs(){
@@ -1370,31 +1372,8 @@
       return;
     }
 
-    setTimeout(function(){
-      var prefix = IDPREFIX[key] || 'OP';
-      COUNTERS[prefix] = (COUNTERS[prefix]||0) + 1;
-      var docId = prefix+'-'+String(COUNTERS[prefix]).padStart(5,'0');
-      var extra = key==='kassa-rashod' && area.querySelector('#kassaRashodType') && area.querySelector('#kassaRashodType').value==='peredacha' ? ' Ожидает подтверждения владельца.' : '';
-      var opTitleEl = document.getElementById('opTitle');
-      var opLabel = opTitleEl ? opTitleEl.textContent : 'Операция';
-      var undoPrefix = prefix, undoCounterVal = COUNTERS[prefix], undone = false;
-      setStatus('success', '<div><strong>Отправлено (демо).</strong> №'+docId+' зарегистрирован.'+extra+
-        '<button class="undo-btn" id="undoLast" type="button">Отменить</button>'+
-        '<button class="ghost receipt-btn" id="printReceipt" type="button" style="width:auto;padding:5px 10px;margin-top:6px;display:inline-block">Печать чека</button></div>');
-      pushRecentOp(docId, opLabel);
-      clearDraft(key);
-      var undoBtn = document.getElementById('undoLast');
-      if(undoBtn){ undoBtn.addEventListener('click', function(){
-        if(undone) return; undone = true;
-        if(COUNTERS[undoPrefix]===undoCounterVal) COUNTERS[undoPrefix]--;
-        removeRecentOp(docId);
-        setStatus('idle', 'Операция №'+docId+' отменена — форма не изменена.');
-      }); }
-      var printBtn = document.getElementById('printReceipt');
-      if(printBtn){ printBtn.addEventListener('click', function(){ printReceipt(docId, opLabel); }); }
-      area.querySelectorAll('input[type=text]:not([readonly]), input[type=number]:not([readonly]), textarea').forEach(function(el){ el.value=''; });
-      btn.innerHTML = prevHtml; btn.disabled=false; btn.dataset.loading='false';
-    }, 600);
+    setStatus('error', 'Эта операция пока не подключена к системе. Сообщите владельцу, какую форму вы открыли.');
+    btn.innerHTML = prevHtml; btn.disabled=false; btn.dataset.loading='false';
   });
   document.getElementById('btnClear').addEventListener('click', renderOpsPanel);
   document.querySelectorAll('.hero-mode-btn').forEach(function(b){ b.addEventListener('click', function(){ setMode(b.dataset.mode); }); });
@@ -1413,7 +1392,7 @@
   });
 
   var menuBtn = document.getElementById('menuBtn'), drawer = document.getElementById('drawer'), drawerOverlay = document.getElementById('drawerOverlay'), menuDot = document.getElementById('menuDot');
-  var pendingCount = 3;
+  var pendingCount = 0;
   function updateMenuDot(){ menuDot.hidden = pendingCount<=0; }
   function openDrawer(){ drawer.setAttribute('data-open','true'); drawerOverlay.setAttribute('data-open','true'); menuBtn.setAttribute('aria-expanded','true'); renderDrawerHistory(); }
   function closeDrawer(){ drawer.setAttribute('data-open','false'); drawerOverlay.setAttribute('data-open','false'); menuBtn.setAttribute('aria-expanded','false'); }
@@ -1428,7 +1407,6 @@
 
   document.getElementById('kpiPending').addEventListener('click', function(){
     setMode('ops'); selectOpsNav('zakaz'); selectOpsSubmode('vydacha');
-    pendingCount = 0; updateMenuDot();
   });
 
   document.getElementById('roleLabel').textContent = AUTH.name || '—';
@@ -1454,10 +1432,7 @@
     });
   });
 
-  var RECENT_OPS = [
-    {id:'ORD-00214', title:'Заказы · Новый', time:'Вчера'},
-    {id:'CM-01140', title:'Касса · Приход', time:'2 дня назад'}
-  ];
+  var RECENT_OPS = [];   /* операции, отправленные из этого окна */
   function pushRecentOp(id, title){
     RECENT_OPS.unshift({id:id, title:title, time:'Только что'});
     if(RECENT_OPS.length>4) RECENT_OPS.length = 4;
@@ -1468,7 +1443,7 @@
   }
   function renderDrawerHistory(){
     var wrap = document.getElementById('drawerHistory');
-    if(!RECENT_OPS.length){ wrap.innerHTML = '<div class="drawer-empty">Операций пока не было</div>'; return; }
+    if(!RECENT_OPS.length){ wrap.innerHTML = '<div class="drawer-empty">В этом окне операций ещё не было</div>'; return; }
     wrap.innerHTML = RECENT_OPS.map(function(o){
       return '<div class="hist-item"><span class="dot"></span><span class="t">№'+o.id+' · '+o.title+'</span><span class="s">'+o.time+'</span></div>';
     }).join('');
@@ -1491,8 +1466,7 @@
 
   var COACH_STEPS = [
     {t:'Меню и быстрые действия', s:'Кнопка слева в шапке открывает боковое меню: отправить операцию, сменить тему и посмотреть последние документы.'},
-    {t:'Разделы одним касанием', s:'Круглые иконки под карточкой кассы — это разделы: Заказы и Касса. Переключение между Операциями и Информацией — вверху.'},
-    {t:'Это визуальный макет', s:'Все данные на экране демонстрационные. Реальная система работает на Google Sheets + Apps Script по отдельному техническому заданию.'}
+    {t:'Разделы одним касанием', s:'Круглые иконки под карточкой кассы — это разделы: Заказы и Касса. Переключение между Операциями и Информацией — вверху.'}
   ];
   var coachIdx = 0;
   var coachOverlay = document.getElementById('coachOverlay'), coachTitle = document.getElementById('coachTitle'), coachText = document.getElementById('coachText'), coachDots = document.getElementById('coachDots'), coachNext = document.getElementById('coachNext');
@@ -1503,31 +1477,13 @@
     coachDots.querySelectorAll('.coach-dot').forEach(function(d,i){ d.setAttribute('aria-current', i===coachIdx ? 'true':'false'); });
     coachNext.textContent = coachIdx===COACH_STEPS.length-1 ? 'Понятно' : 'Далее';
   }
-  function closeCoach(){ coachOverlay.setAttribute('data-open','false'); }
+  function closeCoach(){ coachOverlay.setAttribute('data-open','false'); try { localStorage.setItem('dass_mgr_coach_seen','1'); } catch(e){} }
   coachNext.addEventListener('click', function(){
     if(coachIdx < COACH_STEPS.length-1){ coachIdx++; renderCoachStep(); } else { closeCoach(); }
   });
   document.getElementById('coachSkip').addEventListener('click', closeCoach);
-  setTimeout(function(){ renderCoachStep(); coachOverlay.setAttribute('data-open','true'); }, 700);
-
-  /* ---- период-фильтр (демо) ---- */
-  function periodChipsHtml(id){
-    return '<div class="chip-row period-chip-row" id="'+id+'">'+
-      '<button type="button" class="chip" data-value="today" aria-pressed="true">Сегодня</button>'+
-      '<button type="button" class="chip" data-value="week">Неделя</button>'+
-      '<button type="button" class="chip" data-value="month">Месяц</button>'+
-      '</div>';
-  }
-  function initPeriodChips(scope, id){
-    var row = scope.querySelector('#'+id);
-    if(!row) return;
-    row.querySelectorAll('.chip').forEach(function(c){
-      c.addEventListener('click', function(){
-        row.querySelectorAll('.chip').forEach(function(x){ x.setAttribute('aria-pressed','false'); });
-        c.setAttribute('aria-pressed','true');
-      });
-    });
-  }
+  var coachSeen = false; try { coachSeen = localStorage.getItem('dass_mgr_coach_seen')==='1'; } catch(e){}
+  if(!coachSeen) setTimeout(function(){ renderCoachStep(); coachOverlay.setAttribute('data-open','true'); }, 700);
 
   /* ---- долгое нажатие → контекстное меню строки ---- */
   function attachRowContext(scope){
@@ -1632,32 +1588,82 @@
   });
 
   /* ---- карточка баланса: спарклайн + свайп метрик ---- */
-  var SPARK_DATA = [12,14,13,16,15,18,17,19,21,18,22,24];
+  var SPARK_DATA = [];
   function drawSpark(){
     var svg = document.getElementById('bcSpark');
     if(!svg) return;
+    if(SPARK_DATA.length < 2){ svg.innerHTML = ''; return; }
     var w=220, h=24, max=Math.max.apply(null,SPARK_DATA), min=Math.min.apply(null,SPARK_DATA);
     var pts = SPARK_DATA.map(function(v,i){
       var x = i/(SPARK_DATA.length-1)*w;
-      var y = h - ((v-min)/(max-min||1))*h;
+      var y = h - 2 - ((v-min)/(max-min||1))*(h-4);
       return x.toFixed(1)+','+y.toFixed(1);
     }).join(' ');
     svg.innerHTML = '<polyline points="'+pts+'" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>';
   }
-  drawSpark();
 
-  var METRIC_SETS = [
-    [{l:'Заказы, сент.', v:'14'}, {l:'Долг клиентов', v:'2 100 000'}],
-    [{l:'Средний чек', v:'980 000'}, {l:'К выдаче сегодня', v:'3'}],
-    [{l:'Возвраты', v:'1'}, {l:'Передано владельцу', v:'3 500 000'}]
-  ];
+  var METRIC_SETS = [[{l:'Мои заказы', v:'…'}, {l:'Долг клиентов', v:'…'}]];
   var metricIdx = 0;
   function renderMetrics(){
     var row = document.getElementById('bcMiniRow');
     if(!row) return;
-    row.innerHTML = METRIC_SETS[metricIdx].map(function(m){ return '<div class="bc-mini"><span class="l">'+m.l+'</span><span class="v">'+m.v+'</span></div>'; }).join('');
+    if(metricIdx >= METRIC_SETS.length) metricIdx = 0;
+    row.innerHTML = METRIC_SETS[metricIdx].map(function(m){ return '<div class="bc-mini"><span class="l">'+esc(m.l)+'</span><span class="v">'+esc(m.v)+'</span></div>'; }).join('');
   }
   renderMetrics();
+
+  function plural(n, one, few, many){ var n10=n%10, n100=n%100; return (n10===1 && n100!==11) ? one : (n10>=2 && n10<=4 && (n100<12 || n100>14)) ? few : many; }
+  var MONTHS_SHORT = ['янв.','февр.','март','апр.','май','июнь','июль','авг.','сент.','окт.','нояб.','дек.'];
+  function isToday(v, now){ var d = new Date(v); return !isNaN(d) && d.toDateString()===now.toDateString(); }
+
+  /* Сводка менеджера: касса, мои заказы, к выдаче сегодня, отклонённые запросы — всё из системы. */
+  function refreshSummary(){
+    Promise.all([apiGet('managerCash'), API_CACHE.orders(), apiGet('requests')]).then(function(res){
+      var cash = res[0], orders = res[1], requests = res[2], now = new Date();
+      document.getElementById('bcValue').textContent = fmt(cash.balance);
+      document.getElementById('bcSub').textContent = 'Общая касса менеджеров · на '+now.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+      var bal = cash.balance, series = [bal];
+      cash.moves.forEach(function(m){ bal -= (m.isIn ? m.amount : -m.amount); series.unshift(bal); });
+      SPARK_DATA = series; drawSpark();
+
+      var active = orders.filter(function(o){ return String(o.status)!=='Отменён'; });
+      var month = active.filter(function(o){ var d = new Date(o.created); return !isNaN(d) && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
+      var debt = active.reduce(function(a,o){ return a + Math.max(Number(o.debt)||0, 0); }, 0);
+      var monthSum = month.reduce(function(a,o){ return a + (Number(o.total)||0); }, 0);
+      var notIssued = function(o){ return o.productStatus && o.productStatus !== 'Выдан полностью'; };
+      var issueToday = active.filter(function(o){ return notIssued(o) && o.planned && (isToday(o.planned, now) || new Date(o.planned) < now); });
+      var refundable = active.filter(function(o){ return (Number(o.refundable)||0) > 0; }).length;
+      METRIC_SETS = [
+        [{l:'Мои заказы, '+MONTHS_SHORT[now.getMonth()], v:String(month.length)}, {l:'Долг клиентов', v:fmt(debt)}],
+        [{l:'Средний чек', v: month.length ? fmt(Math.round(monthSum/month.length)) : '—'}, {l:'К выдаче сегодня', v:String(issueToday.length)}],
+        [{l:'К возврату денег', v:String(refundable)}, {l:'Не выдано всего', v:String(active.filter(notIssued).length)}]
+      ];
+      renderMetrics();
+
+      var iN = issueToday.length;
+      document.getElementById('kpiPending').hidden = iN === 0;
+      document.getElementById('kpiPendingText').textContent = iN+' · К выдаче сегодня'+(issueToday.some(function(o){ return !isToday(o.planned, now); }) ? ' (есть просроченные)' : '');
+      NAV_BADGE = { ops: { zakaz: iN || 0 }, info: {} };
+      buildTabs(); tabsActive(state.mode==='ops' ? state.opsNavId : state.infoNavId);
+
+      var failed = requests.filter(function(r){ return String(r.status)==='Ошибка'; });
+      var waiting = requests.filter(function(r){ return ['','Новый','Повтор'].indexOf(String(r.status||''))>-1; });
+      var items = [];
+      if(iN) items.push({crit:true, t:iN+' '+plural(iN,'заказ','заказа','заказов')+' к выдаче сегодня', s:'Заказы → Выдача', go:function(){ document.getElementById('kpiPending').click(); }});
+      failed.slice(0,3).forEach(function(r){ items.push({crit:true, t:'Операция не прошла: '+(r.error||r.op), s:(r.orderId ? 'Заказ '+r.orderId+' · ' : '')+r.op, go:function(){}}); });
+      if(waiting.length) items.push({t:waiting.length+' '+plural(waiting.length,'операция ждёт','операции ждут','операций ждут')+' обработки', s:'Обычно до минуты', go:function(){}});
+      if(cash.balance < 0) items.push({crit:true, t:'Касса менеджеров отрицательная: '+fmt(cash.balance)+' сум', s:'Сообщите владельцу', go:function(){ setMode('info'); selectInfoNav('kassa-info'); }});
+      var dd = document.getElementById('notifDropdown');
+      dd.innerHTML = items.length ? items.map(function(it,i){ return '<button type="button" class="notif-item'+(it.crit?' crit':'')+'" data-i="'+i+'" style="border:0;background:none;text-align:left;width:100%;cursor:pointer;font:inherit"><span class="dot"></span><div><div class="t">'+esc(it.t)+'</div><div class="s">'+esc(it.s)+'</div></div></button>'; }).join('')
+        : '<div class="notif-item"><div><div class="t">Новых событий нет</div><div class="s">Выдач на сегодня и ошибок нет</div></div></div>';
+      dd.querySelectorAll('[data-i]').forEach(function(b){ b.addEventListener('click', function(){ items[Number(b.dataset.i)].go(); dd.setAttribute('data-open','false'); }); });
+      document.getElementById('notifDot').hidden = !items.some(function(it){ return it.crit; });
+      pendingCount = failed.length; updateMenuDot();
+    }).catch(function(e){
+      document.getElementById('bcValue').textContent = '—';
+      document.getElementById('bcSub').textContent = 'Не удалось загрузить: '+(e.message||e);
+    });
+  }
   var bcCard = document.querySelector('.balance-card');
   var bcTouchX=null;
   if(bcCard){
@@ -1676,18 +1682,7 @@
   window.addEventListener('offline', updateOnlineState);
   updateOnlineState();
 
-  /* ---- печать чека ---- */
-  function printReceipt(docId, label){
-    var area = document.getElementById('receiptPrintArea');
-    var now = new Date().toLocaleString('ru-RU');
-    area.innerHTML = '<h2 style="margin:0 0 4px">DASS HOME</h2><p style="margin:0 0 16px;color:#555">Документ №'+docId+'</p>'+
-      '<table style="width:100%;border-collapse:collapse"><tr><td style="padding:4px 0">Операция</td><td style="padding:4px 0;text-align:right">'+label+'</td></tr>'+
-      '<tr><td style="padding:4px 0">Дата</td><td style="padding:4px 0;text-align:right">'+now+'</td></tr>'+
-      '<tr><td style="padding:4px 0">Файл</td><td style="padding:4px 0;text-align:right">MANAGERS</td></tr></table>'+
-      '<p style="margin-top:24px;color:#888;font-size:12px">Демонстрационный документ — визуальный макет DASS HOME.</p>';
-    window.print();
-  }
-
+  if(AUTH.token) refreshSummary();
   setMode('ops');
 })();
 </script>
