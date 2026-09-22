@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>DASS HOME</title>
+<meta name="description" content="DASS HOME — учёт и продажи шоурума: одно приложение с переключением роли (владелец / менеджер).">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#241C15">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="DASS HOME">
+<link rel="apple-touch-icon" href="data:image/png;base64,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">
+<link rel="icon" href="data:image/png;base64,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">
+<style>
+  :root{
+    --bg:#F6F0E3;--surface:#FFFFFF;--border:#E3D8C0;--text:#241E17;--text-muted:#7C7062;
+    --accent:#B4924F;--accent-hover:#96793D;--accent-contrast:#FFFFFF;--accent-soft:#F0E3C5;
+    --hero-bg:#241C15;--hero-text:#F7F0E2;
+    --shadow-1:0 1px 2px rgba(36,28,20,.08);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#120E0A;--surface:#1C1611;--border:#332A20;--text:#F3ECDF;--text-muted:#A79B87;
+      --hero-bg:#0E0B08;--hero-text:#F3ECDF;
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#120E0A;--surface:#1C1611;--border:#332A20;--text:#F3ECDF;--text-muted:#A79B87;
+    --hero-bg:#0E0B08;--hero-text:#F3ECDF;
+  }
+  *{box-sizing:border-box}
+  html,body{height:100%}
+  body{margin:0;background:var(--bg);color:var(--text);font-family:'Public Sans',-apple-system,BlinkMacSystemFont,sans-serif;
+    display:flex;flex-direction:column;overflow:hidden}
+  .shell-topbar{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;
+    padding:10px 14px;padding-top:calc(10px + env(safe-area-inset-top));background:var(--hero-bg);color:var(--hero-text)}
+  .shell-brand{display:flex;align-items:center;gap:9px;min-width:0}
+  .shell-mark{width:28px;height:28px;border-radius:8px;background:var(--accent);display:flex;align-items:center;justify-content:center;
+    color:var(--accent-contrast);font:700 11px/1 'Sora',sans-serif;flex:none}
+  .shell-brand span{font:700 14px/1.2 'Sora',sans-serif;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .role-switch{display:flex;gap:3px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);
+    border-radius:999px;padding:3px;flex:none}
+  .role-btn{border:none;background:transparent;color:var(--hero-text);opacity:.7;font:600 12.5px/1 'Public Sans',sans-serif;
+    padding:7px 13px;border-radius:999px;cursor:pointer;white-space:nowrap}
+  .role-btn[aria-current="true"]{background:var(--accent);color:var(--accent-contrast);opacity:1}
+  .frame-wrap{flex:1;min-height:0;position:relative;background:var(--bg)}
+  .frame-wrap iframe{border:none;width:100%;height:100%;display:block;background:var(--bg)}
+  .frame-loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+    background:var(--bg);color:var(--text-muted);font:600 12.5px/1 'Public Sans',sans-serif;gap:8px;
+    opacity:0;pointer-events:none;transition:opacity .15s ease}
+  .frame-loading[data-show="true"]{opacity:1}
+  .spinner{width:16px;height:16px;border-radius:50%;border:2px solid var(--border);border-top-color:var(--accent);
+    animation:spin .7s linear infinite}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  @font-face{font-family:'Sora';src:local('Sora')}
+</style>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <div class="shell-topbar">
+    <div class="shell-brand"><span class="shell-mark">DH</span><span>DASS HOME</span></div>
+    <div class="role-switch" id="roleSwitch" role="tablist" aria-label="Роль">
+      <button class="role-btn" type="button" data-role="owner" role="tab">Владелец</button>
+      <button class="role-btn" type="button" data-role="manager" role="tab">Менеджер</button>
+    </div>
+  </div>
+  <div class="frame-wrap">
+    <iframe id="appFrame" title="DASS HOME"></iframe>
+    <div class="frame-loading" id="frameLoading"><span class="spinner"></span>Загрузка…</div>
+  </div>
+
+<script>
+(function(){
+  "use strict";
+  var PAGES = { owner: 'owner.html', manager: 'manager.html' };
+  var frame = document.getElementById('appFrame');
+  var loading = document.getElementById('frameLoading');
+  var switchEl = document.getElementById('roleSwitch');
+  var STORAGE_KEY = 'dass_home_role';
+
+  function currentRole(){
+    try { return localStorage.getItem(STORAGE_KEY); } catch(e){ return null; }
+  }
+  function saveRole(role){
+    try { localStorage.setItem(STORAGE_KEY, role); } catch(e){}
+  }
+
+  function setRole(role, opts){
+    opts = opts || {};
+    if(!PAGES[role]) role = 'owner';
+    switchEl.querySelectorAll('.role-btn').forEach(function(b){
+      b.setAttribute('aria-current', b.dataset.role === role ? 'true' : 'false');
+    });
+    if(!opts.silent) saveRole(role);
+    var src = PAGES[role];
+    if(frame.getAttribute('data-src') !== src){
+      loading.setAttribute('data-show', 'true');
+      frame.setAttribute('data-src', src);
+      frame.src = src;
+    }
+  }
+
+  frame.addEventListener('load', function(){
+    loading.setAttribute('data-show', 'false');
+  });
+
+  switchEl.addEventListener('click', function(e){
+    var btn = e.target.closest('.role-btn');
+    if(!btn) return;
+    setRole(btn.dataset.role);
+  });
+
+  setRole(currentRole() || 'owner', { silent: true });
+
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function (e) {
+        console.warn('SW registration failed:', e);
+      });
+    });
+  }
+})();
+</script>
+</body>
+</html>
