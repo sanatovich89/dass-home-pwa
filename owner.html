@@ -546,7 +546,7 @@
   }
   var API_CACHE = {
     _catalog:null, _stock:null, _zakazy:null, _deficit:null, _po:null, _cash:null, _dir:null, _pending:null,
-    catalog: function(){ return this._catalog || (this._catalog = apiGet('catalog')); },
+    catalog: function(){ var self=this; return this._catalog || (this._catalog = apiGet('catalog').then(function(d){ self._catalogData = d; return d; })); },
     stock: function(){ return this._stock || (this._stock = apiGet('stock')); },
     zakazy: function(){ return this._zakazy || (this._zakazy = apiGet('zakazyAll')); },
     deficit: function(){ return this._deficit || (this._deficit = apiGet('deficit')); },
@@ -554,8 +554,17 @@
     cashOverview: function(){ return this._cash || (this._cash = apiGet('cashOverview')); },
     directory: function(){ return this._dir || (this._dir = apiGet('directory')); },
     pendingTransfers: function(){ return this._pending || (this._pending = apiGet('pendingTransfers')); },
-    invalidate: function(){ this._catalog=this._stock=this._zakazy=this._deficit=this._po=this._cash=this._dir=this._pending=null; }
+    invalidate: function(){ this._catalog=this._stock=this._zakazy=this._deficit=this._po=this._cash=this._dir=this._pending=null; var self=this; setTimeout(function(){ self.prefetch(); }, 1500); },
+    /* Фоновая подгрузка справочников/остатков, чтобы формы открывались без ожидания. Ошибки тут не показываем —
+       форма сама повторит запрос и покажет ошибку, если он снова не удастся. */
+    prefetch: function(){
+      var self=this;
+      ['directory','catalog','stock','deficit','purchaseOrders','cashOverview'].forEach(function(k){
+        self[k]().catch(function(){ var f={directory:'_dir',catalog:'_catalog',stock:'_stock',deficit:'_deficit',purchaseOrders:'_po',cashOverview:'_cash'}[k]; self[f]=null; });
+      });
+    }
   };
+  if(AUTH.token) setTimeout(function(){ API_CACHE.prefetch(); }, 300);
   document.getElementById('dateChip').textContent = new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'long',year:'numeric'});
   function skuTag(code,letter){ return '<span class="sku-tag"><span class="dot">'+letter+'</span>'+code+'</span>'; }
   function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
@@ -1884,7 +1893,7 @@
     var idx = [];
     NAV_OPS.forEach(function(n){ idx.push({t:n.title, s:'Раздел операций', ic:n.short.charAt(0), go:function(){ setMode('ops'); selectOpsNav(n.id); } }); });
     NAV_INFO.forEach(function(n){ idx.push({t:n.title, s:'Информация', ic:n.short.charAt(0), go:function(){ setMode('info'); selectInfoNav(n.id); } }); });
-    (API_CACHE._catalog || []).forEach(function(p){
+    (API_CACHE._catalogData || []).forEach(function(p){
       var letter=(p.name||'?').charAt(0).toUpperCase();
       idx.push({t:p.name, s:p.sku+' · Каталог', ic:letter, go:function(){ setMode('info'); selectInfoNav('katalog'); setTimeout(function(){ renderProductCard(p); },170); } });
     });
