@@ -641,7 +641,7 @@
       '<div class="grid-2"><div class="field"><label>SKU <span class="req">*</span></label><input type="text" required id="tnSku" placeholder="DH-SF-205"></div>'+
       '<div class="field"><label>Название <span class="req">*</span></label><input type="text" required id="tnName" placeholder="Диван «Лофт» 3-местный, рогожка"></div></div>'+
       '<div class="grid-3"><div class="field"><label>Категория <span class="req">*</span></label><input type="text" required id="tnCategory" placeholder="Диваны"></div>'+
-      '<div class="field"><label>Ед. измерения</label><select id="tnUnit"><option selected>шт</option><option>компл</option><option>м²</option></select></div>'+
+      '<div class="field"><label>Ед. измерения</label><select id="tnUnit"><option selected>шт</option><option>комплект</option><option>м</option><option>м2</option><option>пог.м</option><option>рулон</option><option>упак</option></select></div>'+
       '<div class="field"><label>Поставщик <span class="req">*</span></label><select required id="tnSupplier">'+skeletonHtml(1)+'</select></div></div>'+
       '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnPrice" placeholder="4 200 000"><span class="suffix">сум</span></div></div>'+
       '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnCost" placeholder="2 850 000"><span class="suffix">сум</span></div><span class="field-hint">Не передаётся в файл MANAGERS</span></div></div>'+
@@ -670,7 +670,7 @@
     return '<div class="grid-2"><div class="field"><label>SKU</label><input type="text" readonly value="'+p.sku+'"></div>'+
       '<div class="field"><label>Название <span class="req">*</span></label><input type="text" required id="teName" value="'+p.name+'"></div></div>'+
       '<div class="grid-3"><div class="field"><label>Категория</label><input type="text" id="teCategory" value="'+p.category+'"></div>'+
-      '<div class="field"><label>Ед. измерения</label><select id="teUnit"><option'+(p.unit==='шт'?' selected':'')+'>шт</option><option'+(p.unit==='компл'?' selected':'')+'>компл</option><option'+(p.unit==='м²'?' selected':'')+'>м²</option></select></div>'+
+      '<div class="field"><label>Ед. измерения</label><select id="teUnit">'+['шт','комплект','м','м2','пог.м','рулон','упак'].map(function(u){ return '<option'+(p.unit===u?' selected':'')+'>'+u+'</option>'; }).join('')+'</select></div>'+
       '<div class="field"><label>Поставщик</label><select id="teSupplier">'+dir.filter(function(d){return d.type==='Поставщик';}).map(function(s){ return '<option value="'+s.id+'"'+(String(s.id)===String(p.supplierId)?' selected':'')+'>'+s.name+'</option>'; }).join('')+'</select></div></div>'+
       '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tePrice" value="'+p.price+'"><span class="suffix">сум</span></div></div>'+
       '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="teCost" value="'+p.cost+'"><span class="suffix">сум</span></div></div></div>'+
@@ -696,21 +696,67 @@
     });
   }
 
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
+  var PAY_METHODS = ['Наличные','Карта','Перечисление','Терминал'];
+  function methodOptions(selected){ return PAY_METHODS.map(function(m){ return '<option'+(m===(selected||'Наличные')?' selected':'')+'>'+m+'</option>'; }).join(''); }
+  function optionsHtml(list, valueFn, labelFn, emptyText){
+    if(!list.length) return '<option value="">'+esc(emptyText||'Нет данных')+'</option>';
+    return list.map(function(x){ return '<option value="'+esc(valueFn(x))+'">'+esc(labelFn(x))+'</option>'; }).join('');
+  }
+  function productOptions(products){ return optionsHtml(products, function(p){ return p.sku; }, function(p){ return p.sku+' · '+p.name; }, 'Нет товаров в каталоге'); }
+  function whOptions(dir){ return optionsHtml(dir.filter(function(d){ return d.type==='Склад' && d.active!==false; }), function(w){ return w.id; }, function(w){ return w.name; }, 'Нет складов в справочнике'); }
+  function dirOptions(dir, type, emptyText){ return optionsHtml(dir.filter(function(d){ return d.type===type; }), function(x){ return x.id; }, function(x){ return x.name; }, emptyText); }
+  /* Физический остаток товара на складе по данным листа ОСТАТКИ (склад в строке — «WH-… — Название» или код). */
+  function stockRow(stock, sku, whId){
+    return stock.filter(function(r){ return String(r.sku)===String(sku) && String(r.warehouse).split('—')[0].trim()===String(whId).trim(); })[0];
+  }
+
   TEMPLATES['sklad-prihod'] = function(){
-    return '<div class="grid-2"><div class="field"><label>Основание <span class="req">*</span></label><select required id="prihodBasis"><option selected value="po">По заказу поставщику</option><option value="free">Без заказа (излишек/подарок)</option></select></div>'+
-      '<div class="field"><label>Склад приёмки <span class="req">*</span></label><select required><option selected>Склад-1 (шоурум)</option><option>Склад-2 (запасной)</option></select></div></div>'+
+    return '<div class="field"><label>Основание <span class="req">*</span></label><select required id="prihodBasis"><option selected value="po">По заказу поставщику</option><option value="free">Без заказа (излишек/находка)</option></select></div>'+
       '<div id="prihodBody" style="margin-top:14px"></div>';
   };
   var PRIHOD_BODY = {
-    po: '<div class="field"><label>Заказ поставщику <span class="req">*</span></label><select required><option selected>PO-00042 · Мебель Строй · частично получен</option><option>PO-00041 · ФурнитураПро · открыт</option></select></div>'+
-      '<div class="table-wrap" style="margin-top:12px"><table class="lines"><thead><tr><th>Товар</th><th>Заказано</th><th>Получено</th><th>Остаток</th><th>Получаем сейчас <span style="color:var(--danger)">*</span></th></tr></thead><tbody>'+
-      '<tr><td>'+skuTag('DH-SF-204','Д')+' Диван «Лофт»</td><td class="num">2</td><td class="num">0</td><td class="num">2</td><td><input type="number" required value="2" min="0" max="2" data-max="2"></td></tr>'+
-      '<tr><td>'+skuTag('DH-CH-050','С')+' Стул «Вена»</td><td class="num">6</td><td class="num">0</td><td class="num">6</td><td><input type="number" value="6" min="0" max="6" data-max="6"></td></tr>'+
-      '</tbody></table></div><div class="field" style="margin-top:12px"><label>Комментарий</label><textarea placeholder="Диван без упаковки, проверить перед выдачей"></textarea></div>',
-    free: '<div class="grid-2"><div class="field"><label>Товар <span class="req">*</span></label><select required><option selected>DH-TB-118 · Стол «Осло» дуб</option></select></div>'+
-      '<div class="field"><label>Количество <span class="req">*</span></label><input type="number" required value="1" min="1"></div></div>'+
-      '<div class="field" style="margin-top:12px"><label>Комментарий <span class="req">*</span></label><textarea required placeholder="Возврат от клиента без оформленного возврата товара"></textarea></div>'
+    po: '<div class="field"><label>Заказ поставщику <span class="req">*</span></label><select required id="grPo">'+skeletonHtml(1)+'</select></div>'+
+      '<div id="grLinesSlot" style="margin-top:12px"></div>'+
+      '<div class="field" style="margin-top:12px"><label>Комментарий</label><textarea id="grComment" placeholder="Диван без упаковки, проверить перед выдачей"></textarea></div>',
+    free: '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="gfWarehouse">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="gfProduct">'+skeletonHtml(1)+'</select></div></div>'+
+      '<div class="field" style="margin-top:12px"><label>Количество <span class="req">*</span></label><input type="number" required id="gfQty" value="1" min="1"></div>'+
+      '<div class="field" style="margin-top:12px"><label>Комментарий <span class="req">*</span></label><textarea required id="gfComment" placeholder="Излишек, найденный при пересчёте"></textarea>'+
+      '<span class="field-hint">Проводится как корректировка «Приход» — без заказа поставщику и без резервов под клиентов.</span></div>'
   };
+  function initPrihodPo(body){
+    Promise.all([apiGet('openPoLines'), API_CACHE.directory()]).then(function(res){
+      var pos = res[0], dir = res[1];
+      var sel = body.querySelector('#grPo'), slot = body.querySelector('#grLinesSlot');
+      if(!sel) return;
+      pos = pos.filter(function(po){ return po.lines.some(function(l){ return l.remaining>0; }); });
+      if(!pos.length){ sel.innerHTML = '<option value="">Нет открытых заказов поставщикам</option>'; slot.innerHTML = emptyState('Нечего принимать', 'Все заказы поставщикам получены полностью. Для прихода без заказа выберите основание «Без заказа».'); return; }
+      sel.innerHTML = pos.map(function(po){ return '<option value="'+esc(po.id)+'">'+esc(po.id+' · '+po.supplier+' · '+po.status)+'</option>'; }).join('');
+      var whOpts = whOptions(dir);
+      function draw(){
+        var po = pos.filter(function(x){ return x.id===sel.value; })[0];
+        if(!po){ slot.innerHTML=''; return; }
+        var lines = po.lines.filter(function(l){ return l.remaining>0; });
+        slot.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>Товар</th><th>Заказано</th><th>Получено</th><th>Остаток</th><th>Принимаем</th><th>Склад</th></tr></thead><tbody>'+
+          lines.map(function(l){
+            return '<tr data-po-line="'+esc(l.lineId)+'"><td>'+esc(l.sku)+' · '+esc(l.name)+'</td><td class="num">'+l.ordered+'</td><td class="num">'+l.received+'</td><td class="num">'+l.remaining+'</td>'+
+              '<td><input type="number" class="gr-qty" value="'+l.remaining+'" min="0" data-max="'+l.remaining+'"></td>'+
+              '<td><select class="gr-wh">'+whOpts.replace('value="'+esc(l.warehouseId)+'"', 'value="'+esc(l.warehouseId)+'" selected')+'</select></td></tr>';
+          }).join('')+'</tbody></table></div>'+
+          '<p class="field-hint" style="margin-top:8px">Поставьте 0 в строках, которые сейчас не пришли. Товар под клиентские заказы автоматически встанет в резерв.</p>';
+      }
+      sel.addEventListener('change', draw);
+      draw();
+    }).catch(function(e){ setStatus('error', 'Не удалось загрузить заказы поставщикам: '+(e.message||e)); });
+  }
+  function initPrihodFree(body){
+    Promise.all([API_CACHE.directory(), API_CACHE.catalog()]).then(function(res){
+      var wh = body.querySelector('#gfWarehouse'), pr = body.querySelector('#gfProduct');
+      if(wh) wh.innerHTML = whOptions(res[0]);
+      if(pr) pr.innerHTML = productOptions(res[1]);
+    }).catch(function(e){ setStatus('error', 'Не удалось загрузить склады/каталог: '+(e.message||e)); });
+  }
 
   TEMPLATES['sklad-rashod'] = function(){
     return '<div class="field-set">'+
@@ -780,24 +826,89 @@
   }
   TEMPLATES['sklad-inventarizatsiya'] = function(){
     return '<div class="field-set">'+
-      '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required><option selected>Склад-2 (запасной)</option><option>Склад-1 (шоурум)</option></select></div>'+
-      '<div class="field"><label>Товар <span class="req">*</span></label><select required><option selected>DH-WD-301 · Шкаф-купе «Милан»</option></select></div></div>'+
-      '<div class="grid-3"><div class="field"><label>Остаток по системе</label><input type="text" readonly value="9 шт"></div>'+
-      '<div class="field"><label>Пересчитанный факт <span class="req">*</span></label><input type="number" required value="8" min="0"></div>'+
-      '<div class="field"><label>Разница</label><input type="text" readonly value="−1 шт" style="color:var(--danger)"></div></div>'+
-      '<div class="field"><label>Комментарий <span class="req">*</span></label><textarea required placeholder="Пересчёт после ревизии, недостача не найдена"></textarea></div></div>';
+      '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="invWarehouse">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="invProduct">'+skeletonHtml(1)+'</select></div></div>'+
+      '<div class="grid-3"><div class="field"><label>Остаток по системе</label><input type="text" readonly id="invSystem" value="…"></div>'+
+      '<div class="field"><label>Пересчитанный факт <span class="req">*</span></label><input type="number" required id="invFact" min="0" placeholder="0"></div>'+
+      '<div class="field"><label>Разница</label><input type="text" readonly id="invDiff" value="—"></div></div>'+
+      '<div class="field"><label>Комментарий <span class="req">*</span></label><textarea required id="invComment" placeholder="Пересчёт после ревизии"></textarea>'+
+      '<span class="field-hint">Система сама создаст движение на разницу между фактом и учётом. Нельзя опустить факт ниже резерва под клиентов — сначала снимите резерв.</span></div></div>';
   };
+  function initInventarizatsiya(area){
+    Promise.all([API_CACHE.directory(), API_CACHE.catalog(), API_CACHE.stock()]).then(function(res){
+      var dir = res[0], products = res[1], stock = res[2];
+      var wh = area.querySelector('#invWarehouse'), pr = area.querySelector('#invProduct'), sys = area.querySelector('#invSystem'), fact = area.querySelector('#invFact'), diff = area.querySelector('#invDiff');
+      if(!wh || !pr) return;
+      wh.innerHTML = whOptions(dir); pr.innerHTML = productOptions(products);
+      function upd(){
+        var row = stockRow(stock, pr.value, wh.value);
+        var phys = row ? row.physical : 0;
+        sys.value = phys+' шт'; sys.dataset.qty = phys;
+        if(fact.value===''){ diff.value='—'; diff.style.color=''; return; }
+        var d = Number(fact.value) - phys;
+        diff.value = (d>0?'+':d<0?'−':'')+Math.abs(d)+' шт';
+        diff.style.color = d<0 ? 'var(--danger)' : '';
+      }
+      wh.addEventListener('change', upd); pr.addEventListener('change', upd); fact.addEventListener('input', upd);
+      upd();
+    }).catch(function(e){ setStatus('error', 'Не удалось загрузить склады/остатки: '+(e.message||e)); });
+  }
 
   TEMPLATES['zakup'] = function(){
     return '<div class="field-set">'+
-      '<div class="grid-2"><div class="field"><label>Поставщик <span class="req">*</span></label><select required><option selected>Мебель Строй</option><option>ФурнитураПро</option><option>ОдноКлик Мебель</option></select></div>'+
-      '<div class="field"><label>Ожидаемая дата</label><input type="date" value="2026-10-03"></div></div>'+
-      '<div class="table-wrap"><table class="lines"><thead><tr><th>Товар</th><th>Дефицит</th><th>Заказываем <span style="color:var(--danger)">*</span></th><th>Цена закупки</th><th>Сумма</th></tr></thead><tbody>'+
-      '<tr><td>'+skuTag('DH-SF-210','Д')+' Диван угловой «Юта»</td><td class="num">1</td><td><input type="number" required value="1" min="0"></td><td><input type="number" value="3900000"></td><td class="num">3 900 000</td></tr>'+
-      '<tr><td>'+skuTag('DH-WD-301','Ш')+' Шкаф-купе «Милан»</td><td class="num">0</td><td><input type="number" value="2" min="0"></td><td><input type="number" value="2050000"></td><td class="num">4 100 000</td></tr>'+
-      '</tbody><tfoot><tr><td colspan="4">Итого по PO</td><td class="num">8 000 000</td></tr></tfoot></table></div>'+
-      '<div class="field"><label>Комментарий</label><textarea placeholder="Довоз к открытию нового зала"></textarea></div></div>';
+      '<div class="grid-3"><div class="field"><label>Поставщик <span class="req">*</span></label><select required id="poSupplier">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Склад назначения <span class="req">*</span></label><select required id="poWarehouse">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Ожидаемая дата</label><input type="date" id="poExpected"></div></div>'+
+      '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px"><button type="button" class="ghost" id="poFillDeficit" style="width:auto;padding:7px 12px">Заполнить по дефициту</button>'+
+      '<button type="button" class="ghost" id="poAddLine" style="width:auto;padding:7px 12px">+ Добавить позицию</button></div>'+
+      '<div class="table-wrap"><table class="lines"><thead><tr><th>Товар</th><th>Дефицит</th><th>Заказываем</th><th>Цена закупки</th><th>Сумма</th><th></th></tr></thead><tbody id="poLines"></tbody>'+
+      '<tfoot><tr><td colspan="4">Итого по заказу</td><td class="num" id="poTotal">0</td><td></td></tr></tfoot></table></div>'+
+      '<div class="field"><label>Комментарий</label><textarea id="poComment" placeholder="Довоз к открытию нового зала"></textarea></div></div>';
   };
+  function initZakup(area){
+    Promise.all([API_CACHE.directory(), API_CACHE.catalog(), API_CACHE.deficit()]).then(function(res){
+      var dir = res[0], products = res[1], deficit = res[2];
+      var sup = area.querySelector('#poSupplier'), wh = area.querySelector('#poWarehouse'), tbody = area.querySelector('#poLines'), total = area.querySelector('#poTotal');
+      if(!sup || !tbody) return;
+      sup.innerHTML = dirOptions(dir, 'Поставщик', 'Нет поставщиков в справочнике');
+      wh.innerHTML = whOptions(dir);
+      var bySku = {}; products.forEach(function(p){ bySku[p.sku] = p; });
+      var prodOpts = productOptions(products);
+      function recalc(){
+        var sum = 0;
+        tbody.querySelectorAll('tr').forEach(function(tr){
+          var q = Number(tr.querySelector('.po-qty').value)||0, pr = Number(tr.querySelector('.po-price').value)||0;
+          tr.querySelector('.po-sum').textContent = fmt(q*pr); sum += q*pr;
+        });
+        total.textContent = fmt(sum);
+      }
+      function addLine(sku, qty, needId, deficitQty){
+        var p = bySku[sku] || products[0];
+        var tr = document.createElement('tr');
+        if(needId) tr.dataset.needId = needId;
+        tr.innerHTML = '<td>'+(needId ? esc(p ? p.sku+' · '+p.name : sku)+'<input type="hidden" class="po-sku" value="'+esc(sku)+'">' : '<select class="po-sku">'+prodOpts+'</select>')+'</td>'+
+          '<td class="num">'+(deficitQty!=null ? deficitQty : '—')+'</td>'+
+          '<td><input type="number" class="po-qty" min="0" value="'+(qty||1)+'"></td>'+
+          '<td><input type="number" class="po-price" min="0" value="'+(p ? p.cost : 0)+'"></td>'+
+          '<td class="num po-sum">0</td><td><button type="button" class="ghost po-del" style="width:auto;padding:4px 8px" aria-label="Удалить строку">×</button></td>';
+        tbody.appendChild(tr);
+        var skuSel = tr.querySelector('select.po-sku');
+        if(skuSel){ if(sku) skuSel.value = sku; skuSel.addEventListener('change', function(){ var pp = bySku[skuSel.value]; if(pp) tr.querySelector('.po-price').value = pp.cost; recalc(); }); }
+        tr.querySelectorAll('input').forEach(function(i){ i.addEventListener('input', recalc); });
+        tr.querySelector('.po-del').addEventListener('click', function(){ tr.remove(); recalc(); });
+        recalc();
+      }
+      area.querySelector('#poAddLine').addEventListener('click', function(){ addLine(); });
+      area.querySelector('#poFillDeficit').addEventListener('click', function(){
+        var supName = sup.options[sup.selectedIndex] ? sup.options[sup.selectedIndex].textContent : '';
+        var rows = deficit.filter(function(d){ return d.toOrder>0 && String(d.supplier)===supName; });
+        tbody.querySelectorAll('tr[data-need-id]').forEach(function(tr){ tr.remove(); });
+        if(!rows.length){ setStatus('idle', 'По поставщику «'+esc(supName)+'» дефицита нет. Добавьте позиции вручную.'); recalc(); return; }
+        rows.forEach(function(d){ addLine(d.sku, d.toOrder, d.needId, d.toOrder); });
+        setStatus('idle', 'Добавлено строк по дефициту: '+rows.length+'. Проверьте количество и цены.');
+      });
+    }).catch(function(e){ setStatus('error', 'Не удалось загрузить справочники/дефицит: '+(e.message||e)); });
+  }
 
   TEMPLATES['kassa-prihod'] = function(){
     return '<div class="chip-row" data-select="kassaPrihodType">'+
@@ -809,7 +920,7 @@
   };
   var KASSA_PRIHOD_BODY = {
     investor: '<div class="grid-2"><div class="field"><label>Инвестор <span class="req">*</span></label><select required id="kpiInvestor">'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Способ</label><select id="kpiMethod"><option selected>Перевод на счёт</option><option>Наличные</option></select></div></div>'+
+      '<div class="field"><label>Способ</label><select id="kpiMethod">'+methodOptions('Перечисление')+'</select></div></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="kpiAmount" placeholder="10 000 000"><span class="suffix">сум</span></div></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="kpiComment" placeholder="Пополнение оборотных средств"></div>',
     confirm: '<div id="kpiConfirmSlot">'+skeletonHtml(3)+'</div>'
@@ -857,26 +968,88 @@
       '<div id="kassaRashodBody" style="margin-top:14px"></div>';
   };
   var KASSA_RASHOD_BODY = {
-    postavshik: '<div class="grid-2"><div class="field"><label>Поставщик <span class="req">*</span></label><select required><option selected>Мебель Строй</option><option>ФурнитураПро</option></select></div>'+
-      '<div class="field"><label>PO / основание</label><select><option selected>PO-00042 · долг 2 200 000 сум</option><option>Без привязки к PO</option></select></div></div>'+
-      '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required value="2200000"><span class="suffix">сум</span></div></div>'+
-      '<div class="field" style="margin-top:12px"><label>Способ оплаты</label><select><option selected>Перевод с карты</option><option>Наличные</option></select></div>'+
-      '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" placeholder="Закрытие остатка по PO-00042"></div>',
-    expense: '<div class="field"><label>Категория <span class="req">*</span></label><select required id="krExpCategory"><option value="">Выбрать…</option><option selected>Аренда</option><option>Коммунальные</option><option>Реклама</option><option>Транспорт</option><option>Прочее</option></select></div>'+
+    postavshik: '<div class="grid-2"><div class="field"><label>Поставщик <span class="req">*</span></label><select required id="krSupSupplier">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Заказ поставщику (основание)</label><select id="krSupPo"><option value="">Без привязки к заказу</option></select></div></div>'+
+      '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="krSupAmount" placeholder="2 200 000"><span class="suffix">сум</span></div><span class="field-hint" id="krSupBalance"></span></div>'+
+      '<div class="field" style="margin-top:12px"><label>Способ оплаты <span class="req">*</span></label><select required id="krSupMethod">'+methodOptions('Перечисление')+'</select></div>'+
+      '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="krSupComment" placeholder="Предоплата по заказу"></div>',
+    expense: '<div class="field"><label>Категория <span class="req">*</span></label><select required id="krExpCategory"><option value="">Выбрать…</option><option selected>Аренда</option><option>Коммунальные</option><option>Логистика</option><option>Реклама</option><option>Ремонт</option><option>Хозрасходы</option><option>Налоги</option><option>Связь</option><option>Прочее</option></select></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="krExpAmount" placeholder="3 500 000"><span class="suffix">сум</span></div></div>'+
-      '<div class="field" style="margin-top:12px"><label>Способ</label><select id="krExpMethod"><option selected>Наличные</option><option>Перевод</option></select></div>'+
+      '<div class="field" style="margin-top:12px"><label>Способ</label><select id="krExpMethod">'+methodOptions()+'</select></div>'+
       '<div class="field" style="margin-top:12px"><label>Основание / комментарий <span class="req">*</span></label><textarea required id="krExpComment" placeholder="Аренда шоурума за октябрь"></textarea></div>',
-    payout: '<div class="field"><label>Получатель <span class="req">*</span></label><select required><option value="">Выбрать…</option><option>Инвестор — Азимов А.</option><option selected>Сотрудник — Каримова Н. (менеджер)</option></select></div>'+
-      '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required value="4500000"><span class="suffix">сум</span></div></div>'+
-      '<div class="field" style="margin-top:12px"><label>Способ</label><select><option selected>Перевод на карту</option><option>Наличные</option></select></div>'+
-      '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" placeholder="Зарплата за сентябрь"></div>'+
-      '<p class="field-hint" style="margin-top:10px">Эта операция пока проводится по-старому — без записи в реальную базу (в разработке).</p>',
+    payout: '<div class="field"><label>Вид выплаты <span class="req">*</span></label><select required id="poutKind">'+
+        '<option value="salaryPay" selected>Выплата зарплаты (по начислению)</option>'+
+        '<option value="salaryAccrue">Начислить зарплату (деньги не двигаются)</option>'+
+        '<option value="investor">Выплата инвестору</option></select></div>'+
+      '<div id="poutBody" style="margin-top:12px"></div>',
     transfer: '<div class="field"><label>Касса OWNER сейчас</label><input type="text" readonly id="krTrBalance" value="…"></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма к передаче <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="krTrAmount" placeholder="5 000 000"><span class="suffix">сум</span></div></div>'+
-      '<div class="field" style="margin-top:12px"><label>Способ</label><select id="krTrMethod"><option selected>Наличные</option><option>Перевод</option></select></div>'+
+      '<div class="field" style="margin-top:12px"><label>Способ</label><select id="krTrMethod">'+methodOptions()+'</select></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="krTrComment" placeholder="Подкрепление кассы менеджеров на неделю"></div>'
   };
   function initKassaRashodExpense(area){ /* без справочника — категория/сумма/способ достаточно для CASH_EXPENSE */ }
+  function initKassaRashodSupplier(body){
+    Promise.all([API_CACHE.directory(), API_CACHE.purchaseOrders(), API_CACHE.cashOverview()]).then(function(res){
+      var dir = res[0], pos = res[1], cash = res[2];
+      var sup = body.querySelector('#krSupSupplier'), po = body.querySelector('#krSupPo'), bal = body.querySelector('#krSupBalance'), amt = body.querySelector('#krSupAmount');
+      if(!sup) return;
+      sup.innerHTML = dirOptions(dir, 'Поставщик', 'Нет поставщиков в справочнике');
+      if(bal) bal.textContent = 'В кассе OWNER: '+fmt(cash.owner)+' сум';
+      if(amt) amt.dataset.max = cash.owner;
+      function drawPo(){
+        var name = sup.options[sup.selectedIndex] ? sup.options[sup.selectedIndex].textContent : '';
+        var list = pos.filter(function(p){ return String(p.supplier)===name; });
+        po.innerHTML = '<option value="">Без привязки к заказу</option>'+list.map(function(p){ return '<option value="'+esc(p.id)+'">'+esc(p.id+' · '+fmt(p.total)+' сум · '+p.status)+'</option>'; }).join('');
+      }
+      sup.addEventListener('change', drawPo);
+      drawPo();
+    }).catch(function(e){ setStatus('error', 'Не удалось загрузить поставщиков/заказы: '+(e.message||e)); });
+  }
+  var POUT_BODY = {
+    salaryPay: '<div class="field"><label>Начисление <span class="req">*</span></label><select required id="poutAccrual">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field has-suffix" style="margin-top:12px"><label>Сумма к выплате <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="poutAmount" placeholder="4 500 000"><span class="suffix">сум</span></div><span class="field-hint" id="poutHint"></span></div>'+
+      '<div class="field" style="margin-top:12px"><label>Способ <span class="req">*</span></label><select required id="poutMethod">'+methodOptions('Карта')+'</select></div>'+
+      '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="poutComment" placeholder="Зарплата за сентябрь"></div>',
+    salaryAccrue: '<div class="grid-2"><div class="field"><label>Сотрудник <span class="req">*</span></label><select required id="poutEmployee">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Период <span class="req">*</span></label><input type="month" required id="poutPeriod"></div></div>'+
+      '<div class="field has-suffix" style="margin-top:12px"><label>Начислено <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="poutAmount" placeholder="4 500 000"><span class="suffix">сум</span></div></div>'+
+      '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="poutComment" placeholder="Оклад + бонус с продаж"></div>'+
+      '<p class="field-hint" style="margin-top:10px">Начисление фиксирует долг перед сотрудником. Деньги уходят из кассы только при «Выплате зарплаты».</p>',
+    investor: '<div class="field"><label>Инвестор <span class="req">*</span></label><select required id="poutInvestor">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="poutAmount" placeholder="10 000 000"><span class="suffix">сум</span></div><span class="field-hint" id="poutHint"></span></div>'+
+      '<div class="field" style="margin-top:12px"><label>Способ <span class="req">*</span></label><select required id="poutMethod">'+methodOptions('Перечисление')+'</select></div>'+
+      '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="poutComment" placeholder="Возврат части вклада"></div>'
+  };
+  function initPayout(body){
+    var kind = body.querySelector('#poutKind'), slot = body.querySelector('#poutBody');
+    if(!kind || !slot) return;
+    function draw(){
+      slot.innerHTML = POUT_BODY[kind.value] || '';
+      if(kind.value==='salaryPay'){
+        apiGet('salaryAccruals').then(function(list){
+          var sel = slot.querySelector('#poutAccrual'), amt = slot.querySelector('#poutAmount'), hint = slot.querySelector('#poutHint');
+          if(!sel) return;
+          if(!list.length){ sel.innerHTML = '<option value="">Нет невыплаченных начислений</option>'; if(hint) hint.textContent = 'Сначала сделайте «Начислить зарплату».'; return; }
+          sel.innerHTML = list.map(function(a){ return '<option value="'+esc(a.id)+'" data-rem="'+a.remaining+'">'+esc(a.employee+' · '+a.period+' · к выплате '+fmt(a.remaining)+' сум')+'</option>'; }).join('');
+          function upd(){ var o = sel.options[sel.selectedIndex], rem = o ? Number(o.dataset.rem) : 0; if(amt){ amt.dataset.max = rem; if(!amt.value) amt.value = rem; } if(hint) hint.textContent = 'Остаток по начислению: '+fmt(rem)+' сум'; }
+          sel.addEventListener('change', function(){ if(amt) amt.value=''; upd(); });
+          upd();
+        }).catch(function(e){ setStatus('error', 'Не удалось загрузить начисления: '+(e.message||e)); });
+      } else {
+        API_CACHE.directory().then(function(dir){
+          var emp = slot.querySelector('#poutEmployee'), inv = slot.querySelector('#poutInvestor');
+          if(emp) emp.innerHTML = dirOptions(dir, 'Сотрудник', 'Нет сотрудников в справочнике');
+          if(inv) inv.innerHTML = dirOptions(dir, 'Инвестор', 'Нет инвесторов в справочнике');
+          var per = slot.querySelector('#poutPeriod'); if(per && !per.value){ var d = new Date(); per.value = d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0'); }
+        }).catch(function(e){ setStatus('error', 'Не удалось загрузить справочник: '+(e.message||e)); });
+        if(kind.value==='investor'){
+          API_CACHE.cashOverview().then(function(c){ var amt = slot.querySelector('#poutAmount'), hint = slot.querySelector('#poutHint'); if(amt) amt.dataset.max = c.owner; if(hint) hint.textContent = 'В кассе OWNER: '+fmt(c.owner)+' сум'; }).catch(function(){});
+        }
+      }
+    }
+    kind.addEventListener('change', draw);
+    draw();
+  }
   function initKassaRashodTransfer(area){
     API_CACHE.cashOverview().then(function(data){
       var bal = area.querySelector('#krTrBalance'), amt = area.querySelector('#krTrAmount');
@@ -885,21 +1058,47 @@
     }).catch(function(e){ setStatus('error', 'Не удалось загрузить баланс кассы: '+(e.message||e)); });
   }
 
+  var REF_TYPES = '<option value="Поставщики" selected>Поставщик</option><option value="Склады">Склад</option><option value="Сотрудники">Сотрудник</option><option value="Инвесторы">Инвестор</option>';
   TEMPLATES['spravochnik-new'] = function(){
-    return '<div class="field"><label>Тип <span class="req">*</span></label><select required id="refTypeNew"><option value="sklad">Склад</option><option value="postavshik" selected>Поставщик</option><option value="sotrudnik">Сотрудник</option><option value="investor">Инвестор</option></select></div>'+
+    return '<div class="field"><label>Тип <span class="req">*</span></label><select required id="refTypeNew">'+REF_TYPES+'</select></div>'+
       '<div id="refBodyNew" style="margin-top:14px"></div>';
   };
   TEMPLATES['spravochnik-edit'] = function(){
-    return '<div class="field"><label>Тип <span class="req">*</span></label><select required id="refTypeEdit"><option value="sklad">Склад</option><option value="postavshik" selected>Поставщик</option><option value="sotrudnik">Сотрудник</option><option value="investor">Инвестор</option></select></div>'+
-      '<div class="field" style="margin-top:12px"><label>Найти <span class="req">*</span></label><input type="text" required value="Мебель Строй"></div>'+
+    return '<div class="grid-2"><div class="field"><label>Тип <span class="req">*</span></label><select required id="refTypeEdit">'+REF_TYPES+'</select></div>'+
+      '<div class="field"><label>Запись <span class="req">*</span></label><select required id="refCode">'+skeletonHtml(1)+'</select></div></div>'+
       '<div id="refBodyEdit" style="margin-top:14px"></div>';
   };
-  var REF_BODY = {
-    sklad: '<div class="grid-2"><div class="field"><label>Название <span class="req">*</span></label><input type="text" required placeholder="Склад-3 (новый филиал)"></div><div class="field"><label>Активен</label><select><option selected>Да</option><option>Нет</option></select></div></div>',
-    postavshik: '<div class="grid-2"><div class="field"><label>Название <span class="req">*</span></label><input type="text" required placeholder="Мебель Строй"></div><div class="field"><label>Телефон</label><input type="text" placeholder="+998 71 200-10-10"></div></div><div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" placeholder="Основной поставщик диванов"></div>',
-    sotrudnik: '<div class="grid-2"><div class="field"><label>Имя <span class="req">*</span></label><input type="text" required placeholder="Каримова Наргиза"></div><div class="field"><label>Роль</label><select><option selected>Менеджер</option><option>Склад</option></select></div></div><div class="field" style="margin-top:12px"><label>Телефон</label><input type="text" placeholder="+998 93 222-33-44"></div>',
-    investor: '<div class="grid-2"><div class="field"><label>Имя <span class="req">*</span></label><input type="text" required placeholder="Азимов Аброр"></div><div class="field"><label>Телефон</label><input type="text" placeholder="+998 90 700-00-01"></div></div>'
+  /* Поля формы → поля opDirectory_: name, phone, extra1, extra2, comment, active. */
+  var REF_FIELDS = {
+    'Поставщики': [['name','Название','Мебель Строй',true],['phone','Телефон','+998 71 200-10-10'],['extra1','Контактное лицо','Рустам'],['extra2','Реквизиты','ИНН, р/с'],['comment','Комментарий','Основной поставщик диванов']],
+    'Склады': [['name','Название','Склад-3 (новый филиал)',true],['comment','Комментарий','Адрес, ответственный']],
+    'Сотрудники': [['name','Имя','Каримова Наргиза',true],['extra1','Должность','Менеджер'],['phone','Телефон','+998 93 222-33-44'],['extra2','Email','name@example.com']],
+    'Инвесторы': [['name','Имя','Азимов Аброр',true],['phone','Телефон','+998 90 700-00-01'],['extra2','Доля','30%'],['comment','Комментарий','']]
   };
+  function refBodyHtml(dir, rec){
+    rec = rec || {};
+    return '<div class="grid-2">'+REF_FIELDS[dir].map(function(f){
+      return '<div class="field"><label>'+f[1]+(f[3]?' <span class="req">*</span>':'')+'</label><input type="text" data-ref="'+f[0]+'"'+(f[3]?' required':'')+' placeholder="'+esc(f[2])+'" value="'+esc(rec[f[0]]||'')+'"></div>';
+    }).join('')+
+    '<div class="field"><label>Активен</label><select data-ref="active"><option value="Да"'+(rec.active===false?'':' selected')+'>Да</option><option value="Нет"'+(rec.active===false?' selected':'')+'>Нет — в архив</option></select></div></div>';
+  }
+  function initRefEdit(area){
+    var type = area.querySelector('#refTypeEdit'), code = area.querySelector('#refCode'), body = area.querySelector('#refBodyEdit');
+    apiGet('dirRecords').then(function(recs){
+      function drawList(){
+        var list = recs.filter(function(r){ return r.dir===type.value; });
+        code.innerHTML = optionsHtml(list, function(r){ return r.code; }, function(r){ return r.code+' · '+r.name+(r.active?'':' (архив)'); }, 'Нет записей');
+        drawRec();
+      }
+      function drawRec(){
+        var rec = recs.filter(function(r){ return r.dir===type.value && String(r.code)===String(code.value); })[0];
+        body.innerHTML = rec ? refBodyHtml(type.value, rec) : '';
+      }
+      type.addEventListener('change', drawList);
+      code.addEventListener('change', drawRec);
+      drawList();
+    }).catch(function(e){ setStatus('error', 'Не удалось загрузить справочник: '+(e.message||e)); });
+  }
 
   /* ============ INFORMATION ============ */
   var NAV_INFO = [
@@ -1212,6 +1411,9 @@
       if(key==='tovar-edit') initTovarEdit(area);
       if(key==='sklad-rashod') initSkladRashod(area);
       if(key==='sklad-peremeshenie') initSkladPeremeshenie(area);
+      if(key==='sklad-inventarizatsiya') initInventarizatsiya(area);
+      if(key==='zakup') initZakup(area);
+      if(key==='spravochnik-edit') initRefEdit(area);
       restoreDraft(area);
       initAutosave(area);
       initValidation(area);
@@ -1221,15 +1423,13 @@
   function wireNestedSelects(area){
     var pType = area.querySelector('#prihodBasis');
     var pBody = area.querySelector('#prihodBody');
-    if(pType && pBody){ var upd = function(){ pBody.innerHTML = PRIHOD_BODY[pType.value] || ''; }; pType.addEventListener('change', upd); upd(); }
+    if(pType && pBody){ var upd = function(){ pBody.innerHTML = PRIHOD_BODY[pType.value] || ''; if(pType.value==='po') initPrihodPo(pBody); else initPrihodFree(pBody); }; pType.addEventListener('change', upd); upd(); }
     var kpType = area.querySelector('#kassaPrihodType'), kpBody = area.querySelector('#kassaPrihodBody');
     if(kpType && kpBody){ var u1=function(){ kpBody.innerHTML = KASSA_PRIHOD_BODY[kpType.value] || ''; initChips(kpBody); if(kpType.value==='investor') initKassaPrihodInvestor(kpBody); if(kpType.value==='confirm') renderConfirmList(kpBody); }; kpType.addEventListener('change',u1); u1(); }
     var krType = area.querySelector('#kassaRashodType'), krBody = area.querySelector('#kassaRashodBody');
-    if(krType && krBody){ var u2=function(){ krBody.innerHTML = KASSA_RASHOD_BODY[krType.value] || ''; initChips(krBody); if(krType.value==='transfer') initKassaRashodTransfer(krBody); }; krType.addEventListener('change',u2); u2(); }
+    if(krType && krBody){ var u2=function(){ krBody.innerHTML = KASSA_RASHOD_BODY[krType.value] || ''; initChips(krBody); if(krType.value==='transfer') initKassaRashodTransfer(krBody); if(krType.value==='postavshik') initKassaRashodSupplier(krBody); if(krType.value==='payout') initPayout(krBody); }; krType.addEventListener('change',u2); u2(); }
     var rtNew = area.querySelector('#refTypeNew'), rbNew = area.querySelector('#refBodyNew');
-    if(rtNew && rbNew){ var u3=function(){ rbNew.innerHTML = REF_BODY[rtNew.value] || ''; }; rtNew.addEventListener('change',u3); u3(); }
-    var rtEdit = area.querySelector('#refTypeEdit'), rbEdit = area.querySelector('#refBodyEdit');
-    if(rtEdit && rbEdit){ var u4=function(){ rbEdit.innerHTML = REF_BODY[rtEdit.value] || ''; }; rtEdit.addEventListener('change',u4); u4(); }
+    if(rtNew && rbNew){ var u3=function(){ rbNew.innerHTML = refBodyHtml(rtNew.value); }; rtNew.addEventListener('change',u3); u3(); }
   }
 
   function selectInfoNav(navId){
@@ -1270,7 +1470,9 @@
 
   /* Ключи форм, подключённых к apiOwnerSubmit_ (см. OWNER_API_OPS в бэкенде). */
   var REAL_OPS = { 'tovar-new':'CREATE_PRODUCT', 'tovar-edit':'UPDATE_PRODUCT',
-    'sklad-rashod':'STOCK_WRITEOFF', 'sklad-peremeshenie':'STOCK_TRANSFER' };
+    'sklad-rashod':'STOCK_WRITEOFF', 'sklad-peremeshenie':'STOCK_TRANSFER',
+    'sklad-inventarizatsiya':'STOCK_ADJUST', 'zakup':'PURCHASE_ORDER',
+    'spravochnik-new':'DIRECTORY', 'spravochnik-edit':'DIRECTORY' };
   function realOpFor(key, area){
     if(key==='kassa-prihod'){
       var t = area.querySelector('#kassaPrihodType');
@@ -1280,7 +1482,16 @@
       var t = area.querySelector('#kassaRashodType');
       if(t && t.value==='expense') return 'CASH_EXPENSE';
       if(t && t.value==='transfer') return 'CASH_TO_MANAGERS';
-      return null; /* 'postavshik'/'payout' — пока демо, см. buildRealPayload */
+      if(t && t.value==='postavshik') return 'CASH_PAY_SUPPLIER';
+      if(t && t.value==='payout'){
+        var k = area.querySelector('#poutKind');
+        return k ? ({ salaryPay:'SALARY_PAY', salaryAccrue:'SALARY_ACCRUE', investor:'CASH_INVESTOR_OUT' })[k.value] : null;
+      }
+      return null;
+    }
+    if(key==='sklad-prihod'){
+      var b = area.querySelector('#prihodBasis');
+      return (b && b.value==='free') ? 'STOCK_ADJUST' : 'GOODS_RECEIPT';
     }
     return REAL_OPS[key];
   }
@@ -1328,6 +1539,58 @@
         if(!isNaN(max) && amt>max) return { error: 'Недостаточно средств в кассе OWNER: запрошено '+fmt(amt)+', доступно '+fmt(max)+'.' };
         return { payload: { amount: amt, method: val(area,'#krTrMethod'), comment: val(area,'#krTrComment') } };
       }
+      if(t && t.value==='postavshik'){
+        if(!val(area,'#krSupSupplier')) return { error: 'Выберите поставщика.' };
+        return { payload: { supplier: val(area,'#krSupSupplier'), po: val(area,'#krSupPo'), amount: Number(val(area,'#krSupAmount'))||0,
+          method: val(area,'#krSupMethod'), comment: val(area,'#krSupComment') } };
+      }
+      if(t && t.value==='payout'){
+        var kind = val(area,'#poutKind');
+        var common = { amount: Number(val(area,'#poutAmount'))||0, comment: val(area,'#poutComment') };
+        if(kind==='salaryPay'){ if(!val(area,'#poutAccrual')) return { error: 'Нет начисления для выплаты.' }; common.accrual = val(area,'#poutAccrual'); common.method = val(area,'#poutMethod'); }
+        if(kind==='salaryAccrue'){ if(!val(area,'#poutEmployee')) return { error: 'Выберите сотрудника.' }; common.employee = val(area,'#poutEmployee'); common.period = val(area,'#poutPeriod'); }
+        if(kind==='investor'){ if(!val(area,'#poutInvestor')) return { error: 'Выберите инвестора.' }; common.investor = val(area,'#poutInvestor'); common.method = val(area,'#poutMethod'); }
+        return { payload: common };
+      }
+    }
+    if(key==='sklad-prihod'){
+      if(val(area,'#prihodBasis')==='free'){
+        if(!val(area,'#gfWarehouse') || !val(area,'#gfProduct')) return { error: 'Выберите склад и товар.' };
+        return { payload: { mode: 'Приход', warehouse: val(area,'#gfWarehouse'), product: val(area,'#gfProduct'),
+          qty: Number(val(area,'#gfQty'))||0, comment: val(area,'#gfComment') } };
+      }
+      if(!val(area,'#grPo')) return { error: 'Нет открытого заказа поставщику.' };
+      var grLines = [];
+      area.querySelectorAll('tr[data-po-line]').forEach(function(tr){
+        var q = Number(tr.querySelector('.gr-qty').value)||0;
+        if(q>0) grLines.push([tr.dataset.poLine, '', '', '', '', q, tr.querySelector('.gr-wh').value]);
+      });
+      if(!grLines.length) return { error: 'Укажите количество хотя бы по одной строке.' };
+      return { payload: { po: val(area,'#grPo'), comment: val(area,'#grComment'), lines: grLines } };
+    }
+    if(key==='sklad-inventarizatsiya'){
+      if(!val(area,'#invWarehouse') || !val(area,'#invProduct')) return { error: 'Выберите склад и товар.' };
+      return { payload: { mode: 'Установить факт', warehouse: val(area,'#invWarehouse'), product: val(area,'#invProduct'),
+        qty: Number(val(area,'#invFact')), comment: val(area,'#invComment') } };
+    }
+    if(key==='zakup'){
+      if(!val(area,'#poSupplier') || !val(area,'#poWarehouse')) return { error: 'Выберите поставщика и склад назначения.' };
+      var poLines = [];
+      area.querySelectorAll('#poLines tr').forEach(function(tr){
+        var q = Number(tr.querySelector('.po-qty').value)||0;
+        if(q>0) poLines.push([tr.querySelector('.po-sku').value, '', '', q, Number(tr.querySelector('.po-price').value)||0, tr.dataset.needId||'', '']);
+      });
+      if(!poLines.length) return { error: 'Добавьте хотя бы одну позицию с количеством больше нуля.' };
+      return { payload: { supplier: val(area,'#poSupplier'), warehouse: val(area,'#poWarehouse'), expected: val(area,'#poExpected'),
+        comment: val(area,'#poComment'), lines: poLines } };
+    }
+    if(key==='spravochnik-new' || key==='spravochnik-edit'){
+      var isNew = key==='spravochnik-new';
+      var body = area.querySelector(isNew ? '#refBodyNew' : '#refBodyEdit');
+      if(!isNew && !val(area,'#refCode')) return { error: 'Выберите запись.' };
+      var pl = { dir: val(area, isNew ? '#refTypeNew' : '#refTypeEdit'), mode: isNew ? 'Новый' : 'Изменить', code: isNew ? '' : val(area,'#refCode') };
+      if(body) body.querySelectorAll('[data-ref]').forEach(function(el){ pl[el.dataset.ref] = el.value.trim(); });
+      return { payload: pl };
     }
     return { error: 'Неизвестная операция.' };
   }
