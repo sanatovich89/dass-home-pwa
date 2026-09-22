@@ -642,7 +642,7 @@
       '<div class="field"><label>Название <span class="req">*</span></label><input type="text" required id="tnName" placeholder="Диван «Лофт» 3-местный, рогожка"></div></div>'+
       '<div class="grid-3"><div class="field"><label>Категория <span class="req">*</span></label><input type="text" required id="tnCategory" placeholder="Диваны"></div>'+
       '<div class="field"><label>Ед. измерения</label><select id="tnUnit"><option selected>шт</option><option>комплект</option><option>м</option><option>м2</option><option>пог.м</option><option>рулон</option><option>упак</option></select></div>'+
-      '<div class="field"><label>Поставщик <span class="req">*</span></label><select required id="tnSupplier">'+skeletonHtml(1)+'</select></div></div>'+
+      '<div class="field"><label>Поставщик <span class="req">*</span></label><select required id="tnSupplier"><option value="">Загрузка…</option></select></div></div>'+
       '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnPrice" placeholder="4 200 000"><span class="suffix">сум</span></div></div>'+
       '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnCost" placeholder="2 850 000"><span class="suffix">сум</span></div><span class="field-hint">Не передаётся в файл MANAGERS</span></div></div>'+
       '<div class="grid-2"><div class="field"><label>Фото товара</label>'+dropzoneHtml('tovarPhotoNew')+'<span class="field-hint">Загрузка фото в API пока не подключена — можно добавить ссылку на фото ниже</span><input type="text" id="tnPhoto" placeholder="Ссылка на фото (необязательно)" style="margin-top:8px"></div>'+
@@ -662,7 +662,7 @@
 
   TEMPLATES['tovar-edit'] = function(){
     return '<div class="field-set">'+
-      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="teProduct">'+skeletonHtml(1)+'</select>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="teProduct"><option value="">Загрузка…</option></select>'+
       '<span class="field-hint">Выберите товар — карточка загрузится ниже, измените нужные поля</span></div>'+
       '<div id="teFieldsSlot" style="margin-top:14px"></div></div>';
   };
@@ -716,11 +716,11 @@
       '<div id="prihodBody" style="margin-top:14px"></div>';
   };
   var PRIHOD_BODY = {
-    po: '<div class="field"><label>Заказ поставщику <span class="req">*</span></label><select required id="grPo">'+skeletonHtml(1)+'</select></div>'+
+    po: '<div class="field"><label>Заказ поставщику <span class="req">*</span></label><select required id="grPo"><option value="">Загрузка…</option></select></div>'+
       '<div id="grLinesSlot" style="margin-top:12px"></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><textarea id="grComment" placeholder="Диван без упаковки, проверить перед выдачей"></textarea></div>',
-    free: '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="gfWarehouse">'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="gfProduct">'+skeletonHtml(1)+'</select></div></div>'+
+    free: '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="gfWarehouse"><option value="">Загрузка…</option></select></div>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="gfProduct"><option value="">Загрузка…</option></select></div></div>'+
       '<div class="field" style="margin-top:12px"><label>Количество <span class="req">*</span></label><input type="number" required id="gfQty" value="1" min="1"></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий <span class="req">*</span></label><textarea required id="gfComment" placeholder="Излишек, найденный при пересчёте"></textarea>'+
       '<span class="field-hint">Проводится как корректировка «Приход» — без заказа поставщику и без резервов под клиентов.</span></div>'
@@ -760,8 +760,8 @@
 
   TEMPLATES['sklad-rashod'] = function(){
     return '<div class="field-set">'+
-      '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="srWarehouse">'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="srProduct">'+skeletonHtml(1)+'</select></div></div>'+
+      '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="srWarehouse"><option value="">Загрузка…</option></select></div>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="srProduct"><option value="">Загрузка…</option></select></div></div>'+
       '<div class="grid-2"><div class="field"><label>Количество <span class="req">*</span></label><input type="number" required id="srQty" value="1" min="1"><span class="field-hint" id="srAvailHint"></span></div>'+
       '<div class="field"><label>Причина <span class="req">*</span></label><select required id="srReason"><option value="">Выбрать…</option><option>Брак / порча</option><option>Демо-образец списан</option><option>Недостача</option><option>Прочее</option></select></div></div>'+
       '<div class="field"><label>Комментарий <span class="req">*</span></label><textarea required id="srComment" placeholder="Порвана обивка при демонтаже витрины"></textarea></div></div>';
@@ -796,9 +796,9 @@
   }
   TEMPLATES['sklad-peremeshenie'] = function(){
     return '<div class="field-set">'+
-      '<div class="grid-2"><div class="field"><label>Откуда <span class="req">*</span></label><select required id="spFrom">'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Куда <span class="req">*</span></label><select required id="spTo">'+skeletonHtml(1)+'</select></div></div>'+
-      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="spProduct">'+skeletonHtml(1)+'</select><span class="field-hint" id="spAvailHint"></span></div>'+
+      '<div class="grid-2"><div class="field"><label>Откуда <span class="req">*</span></label><select required id="spFrom"><option value="">Загрузка…</option></select></div>'+
+      '<div class="field"><label>Куда <span class="req">*</span></label><select required id="spTo"><option value="">Загрузка…</option></select></div></div>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="spProduct"><option value="">Загрузка…</option></select><span class="field-hint" id="spAvailHint"></span></div>'+
       '<div class="grid-2"><div class="field"><label>Количество <span class="req">*</span></label><input type="number" required id="spQty" value="1" min="1"></div>'+
       '<div class="field"><label>Комментарий</label><input type="text" id="spComment" placeholder="Для выкладки в зале"></div></div></div>';
   };
@@ -826,8 +826,8 @@
   }
   TEMPLATES['sklad-inventarizatsiya'] = function(){
     return '<div class="field-set">'+
-      '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="invWarehouse">'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="invProduct">'+skeletonHtml(1)+'</select></div></div>'+
+      '<div class="grid-2"><div class="field"><label>Склад <span class="req">*</span></label><select required id="invWarehouse"><option value="">Загрузка…</option></select></div>'+
+      '<div class="field"><label>Товар <span class="req">*</span></label><select required id="invProduct"><option value="">Загрузка…</option></select></div></div>'+
       '<div class="grid-3"><div class="field"><label>Остаток по системе</label><input type="text" readonly id="invSystem" value="…"></div>'+
       '<div class="field"><label>Пересчитанный факт <span class="req">*</span></label><input type="number" required id="invFact" min="0" placeholder="0"></div>'+
       '<div class="field"><label>Разница</label><input type="text" readonly id="invDiff" value="—"></div></div>'+
@@ -856,8 +856,8 @@
 
   TEMPLATES['zakup'] = function(){
     return '<div class="field-set">'+
-      '<div class="grid-3"><div class="field"><label>Поставщик <span class="req">*</span></label><select required id="poSupplier">'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Склад назначения <span class="req">*</span></label><select required id="poWarehouse">'+skeletonHtml(1)+'</select></div>'+
+      '<div class="grid-3"><div class="field"><label>Поставщик <span class="req">*</span></label><select required id="poSupplier"><option value="">Загрузка…</option></select></div>'+
+      '<div class="field"><label>Склад назначения <span class="req">*</span></label><select required id="poWarehouse"><option value="">Загрузка…</option></select></div>'+
       '<div class="field"><label>Ожидаемая дата</label><input type="date" id="poExpected"></div></div>'+
       '<div style="display:flex;gap:8px;flex-wrap:wrap;margin:4px 0 10px"><button type="button" class="ghost" id="poFillDeficit" style="width:auto;padding:7px 12px">Заполнить по дефициту</button>'+
       '<button type="button" class="ghost" id="poAddLine" style="width:auto;padding:7px 12px">+ Добавить позицию</button></div>'+
@@ -919,7 +919,7 @@
       '<div id="kassaPrihodBody" style="margin-top:14px"></div>';
   };
   var KASSA_PRIHOD_BODY = {
-    investor: '<div class="grid-2"><div class="field"><label>Инвестор <span class="req">*</span></label><select required id="kpiInvestor">'+skeletonHtml(1)+'</select></div>'+
+    investor: '<div class="grid-2"><div class="field"><label>Инвестор <span class="req">*</span></label><select required id="kpiInvestor"><option value="">Загрузка…</option></select></div>'+
       '<div class="field"><label>Способ</label><select id="kpiMethod">'+methodOptions('Перечисление')+'</select></div></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="kpiAmount" placeholder="10 000 000"><span class="suffix">сум</span></div></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="kpiComment" placeholder="Пополнение оборотных средств"></div>',
@@ -968,7 +968,7 @@
       '<div id="kassaRashodBody" style="margin-top:14px"></div>';
   };
   var KASSA_RASHOD_BODY = {
-    postavshik: '<div class="grid-2"><div class="field"><label>Поставщик <span class="req">*</span></label><select required id="krSupSupplier">'+skeletonHtml(1)+'</select></div>'+
+    postavshik: '<div class="grid-2"><div class="field"><label>Поставщик <span class="req">*</span></label><select required id="krSupSupplier"><option value="">Загрузка…</option></select></div>'+
       '<div class="field"><label>Заказ поставщику (основание)</label><select id="krSupPo"><option value="">Без привязки к заказу</option></select></div></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="krSupAmount" placeholder="2 200 000"><span class="suffix">сум</span></div><span class="field-hint" id="krSupBalance"></span></div>'+
       '<div class="field" style="margin-top:12px"><label>Способ оплаты <span class="req">*</span></label><select required id="krSupMethod">'+methodOptions('Перечисление')+'</select></div>'+
@@ -1006,16 +1006,16 @@
     }).catch(function(e){ setStatus('error', 'Не удалось загрузить поставщиков/заказы: '+(e.message||e)); });
   }
   var POUT_BODY = {
-    salaryPay: '<div class="field"><label>Начисление <span class="req">*</span></label><select required id="poutAccrual">'+skeletonHtml(1)+'</select></div>'+
+    salaryPay: '<div class="field"><label>Начисление <span class="req">*</span></label><select required id="poutAccrual"><option value="">Загрузка…</option></select></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма к выплате <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="poutAmount" placeholder="4 500 000"><span class="suffix">сум</span></div><span class="field-hint" id="poutHint"></span></div>'+
       '<div class="field" style="margin-top:12px"><label>Способ <span class="req">*</span></label><select required id="poutMethod">'+methodOptions('Карта')+'</select></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="poutComment" placeholder="Зарплата за сентябрь"></div>',
-    salaryAccrue: '<div class="grid-2"><div class="field"><label>Сотрудник <span class="req">*</span></label><select required id="poutEmployee">'+skeletonHtml(1)+'</select></div>'+
+    salaryAccrue: '<div class="grid-2"><div class="field"><label>Сотрудник <span class="req">*</span></label><select required id="poutEmployee"><option value="">Загрузка…</option></select></div>'+
       '<div class="field"><label>Период <span class="req">*</span></label><input type="month" required id="poutPeriod"></div></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Начислено <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="poutAmount" placeholder="4 500 000"><span class="suffix">сум</span></div></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="poutComment" placeholder="Оклад + бонус с продаж"></div>'+
       '<p class="field-hint" style="margin-top:10px">Начисление фиксирует долг перед сотрудником. Деньги уходят из кассы только при «Выплате зарплаты».</p>',
-    investor: '<div class="field"><label>Инвестор <span class="req">*</span></label><select required id="poutInvestor">'+skeletonHtml(1)+'</select></div>'+
+    investor: '<div class="field"><label>Инвестор <span class="req">*</span></label><select required id="poutInvestor"><option value="">Загрузка…</option></select></div>'+
       '<div class="field has-suffix" style="margin-top:12px"><label>Сумма <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="poutAmount" placeholder="10 000 000"><span class="suffix">сум</span></div><span class="field-hint" id="poutHint"></span></div>'+
       '<div class="field" style="margin-top:12px"><label>Способ <span class="req">*</span></label><select required id="poutMethod">'+methodOptions('Перечисление')+'</select></div>'+
       '<div class="field" style="margin-top:12px"><label>Комментарий</label><input type="text" id="poutComment" placeholder="Возврат части вклада"></div>'
@@ -1065,7 +1065,7 @@
   };
   TEMPLATES['spravochnik-edit'] = function(){
     return '<div class="grid-2"><div class="field"><label>Тип <span class="req">*</span></label><select required id="refTypeEdit">'+REF_TYPES+'</select></div>'+
-      '<div class="field"><label>Запись <span class="req">*</span></label><select required id="refCode">'+skeletonHtml(1)+'</select></div></div>'+
+      '<div class="field"><label>Запись <span class="req">*</span></label><select required id="refCode"><option value="">Загрузка…</option></select></div></div>'+
       '<div id="refBodyEdit" style="margin-top:14px"></div>';
   };
   /* Поля формы → поля opDirectory_: name, phone, extra1, extra2, comment, active. */
