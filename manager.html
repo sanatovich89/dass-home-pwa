@@ -355,17 +355,14 @@
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <nav class="drawer" id="drawer" aria-label="Главное меню">
   <div class="drawer-head">
-    <button class="drawer-brand" id="roleTrigger" type="button" aria-expanded="false"><span class="drawer-mark">DH</span><div><h3>DASS HOME</h3><p>Менеджер · <span id="roleLabel">Каримова Н.</span></p></div></button>
+    <div class="drawer-brand"><span class="drawer-mark">DH</span><div><h3>DASS HOME</h3><p>Менеджер · <span id="roleLabel">—</span></p></div></div>
     <button class="drawer-close" id="drawerClose" type="button" aria-label="Закрыть меню"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
-  </div>
-  <div class="role-list" id="roleList">
-    <button class="role-item" type="button" data-role="Каримова Н." aria-current="true">Каримова Н.</button>
-    <button class="role-item" type="button" data-role="Рустамов Б.">Рустамов Б.</button>
   </div>
   <div class="drawer-section">
     <h4>Быстрые действия</h4>
     <button class="drawer-action" id="drawerProvesti" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4.5 10.5l3.3 3.3L15.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Отправить операцию</button>
     <button class="drawer-action" id="drawerClear" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Очистить форму</button>
+    <button class="drawer-action" id="drawerLogout" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M8 4H5a1 1 0 00-1 1v10a1 1 0 001 1h3M13 7l3 3-3 3M16 10H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Выйти</button>
   </div>
   <div class="drawer-section">
     <h4>Последние операции</h4>
@@ -496,21 +493,43 @@
 
   /* ============ API (DASS HOME OWNER, Web App) ============ */
   var API_BASE = 'https://script.google.com/macros/s/AKfycbzL8o2xPHqmeFxkozMrinCV6ALbcWEqyK2oRX6_QQQo_JESIR7Za9AyqC01heNkE1Q_/exec';
+  var AUTH = (function(){
+    var m = /[?&]token=([^&]+)/.exec(location.search);
+    return {
+      token: m ? decodeURIComponent(m[1]) : '',
+      name: (function(){ var mm = /[?&]name=([^&]+)/.exec(location.search); return mm ? decodeURIComponent(mm[1]) : ''; })()
+    };
+  })();
+  function apiSessionExpired(){
+    try { parent.postMessage({ type: 'dass-session-expired' }, '*'); } catch(e){}
+  }
   function apiGet(action, params){
-    var qs = ['action=' + encodeURIComponent(action)];
+    var qs = ['action=' + encodeURIComponent(action), 'token=' + encodeURIComponent(AUTH.token)];
     for (var k in (params || {})) { if (params[k] !== undefined && params[k] !== null) qs.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k])); }
     return fetch(API_BASE + '?' + qs.join('&'), { method: 'GET' })
       .then(function (r) { return r.json(); })
-      .then(function (j) { if (!j.ok) throw new Error(j.error || 'Ошибка API'); return j.data; });
+      .then(function (j) {
+        if (!j.ok) {
+          if (/вход в систему|Сессия истекла/i.test(j.error || '')) apiSessionExpired();
+          throw new Error(j.error || 'Ошибка API');
+        }
+        return j.data;
+      });
   }
   function apiSubmit(op, payload){
     var key = op + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
     return fetch(API_BASE, {
       method: 'POST',
-      body: JSON.stringify({ action: 'submit', op: op, payload: payload, key: key })
+      body: JSON.stringify({ action: 'submit', op: op, payload: payload, key: key, token: AUTH.token })
     })
       .then(function (r) { return r.json(); })
-      .then(function (j) { if (!j.ok) throw new Error(j.error || 'Ошибка API'); return j; });
+      .then(function (j) {
+        if (!j.ok) {
+          if (/вход в систему|Сессия истекла/i.test(j.error || '')) apiSessionExpired();
+          throw new Error(j.error || 'Ошибка API');
+        }
+        return j;
+      });
   }
   /* Кэш справочников на время сессии страницы — сбрасывается через API_CACHE.invalidate() после операций */
   var API_CACHE = {
@@ -1397,7 +1416,7 @@
   var pendingCount = 3;
   function updateMenuDot(){ menuDot.hidden = pendingCount<=0; }
   function openDrawer(){ drawer.setAttribute('data-open','true'); drawerOverlay.setAttribute('data-open','true'); menuBtn.setAttribute('aria-expanded','true'); renderDrawerHistory(); }
-  function closeDrawer(){ drawer.setAttribute('data-open','false'); drawerOverlay.setAttribute('data-open','false'); menuBtn.setAttribute('aria-expanded','false'); document.getElementById('roleList').setAttribute('data-open','false'); document.getElementById('roleTrigger').setAttribute('aria-expanded','false'); }
+  function closeDrawer(){ drawer.setAttribute('data-open','false'); drawerOverlay.setAttribute('data-open','false'); menuBtn.setAttribute('aria-expanded','false'); }
   menuBtn.addEventListener('click', openDrawer);
   document.getElementById('drawerClose').addEventListener('click', closeDrawer);
   drawerOverlay.addEventListener('click', closeDrawer);
@@ -1412,19 +1431,10 @@
     pendingCount = 0; updateMenuDot();
   });
 
-  var roleTrigger = document.getElementById('roleTrigger'), roleList = document.getElementById('roleList'), roleLabel = document.getElementById('roleLabel');
-  roleTrigger.addEventListener('click', function(e){
-    e.stopPropagation();
-    var open = roleList.getAttribute('data-open')==='true';
-    roleList.setAttribute('data-open', open ? 'false':'true');
-    roleTrigger.setAttribute('aria-expanded', open ? 'false':'true');
-  });
-  roleList.querySelectorAll('.role-item').forEach(function(b){
-    b.addEventListener('click', function(){
-      roleList.querySelectorAll('.role-item').forEach(function(x){ x.setAttribute('aria-current','false'); });
-      b.setAttribute('aria-current','true');
-      roleLabel.textContent = b.dataset.role;
-    });
+  document.getElementById('roleLabel').textContent = AUTH.name || '—';
+  document.getElementById('drawerLogout').addEventListener('click', function(){
+    closeDrawer();
+    try { parent.postMessage({ type: 'dass-logout' }, '*'); } catch(e){}
   });
 
   document.querySelectorAll('#themeToggle .theme-btn').forEach(function(b){
