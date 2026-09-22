@@ -127,9 +127,22 @@
 <script>
 (function(){
   "use strict";
-  var API_BASE = 'https://script.google.com/macros/s/AKfycbxJWwv2rbycjNHdILaqaw6w6qZDChHmqk-JtaA8t3SmAEaTsQUV_BbS2Yar9-ahut8/exec';
+  /* Тестовый контур (песочница): ?env=test — отдельные таблицы OWNER/MANAGERS (ТЕСТ), отдельное развёртывание
+     и отдельная сессия, чтобы вход в песочницу не подменял рабочий вход. */
+  var IS_TEST = /[?&]env=test(&|$)/.test(location.search);
+  var API_BASE = IS_TEST
+    ? 'https://script.google.com/macros/s/AKfycbz36SRB8Pm5XvEpjTjnim6RgVeB2Ek4R25s0Bz-Lb7DIhYvnlq1TKCx0ARNB34JWIjN-w/exec'
+    : 'https://script.google.com/macros/s/AKfycbxJWwv2rbycjNHdILaqaw6w6qZDChHmqk-JtaA8t3SmAEaTsQUV_BbS2Yar9-ahut8/exec';
   var PAGES = { owner: 'owner.html', manager: 'manager.html' };
-  var STORAGE_KEY = 'dass_home_session';
+  var STORAGE_KEY = IS_TEST ? 'dass_home_session_test' : 'dass_home_session';
+  if (IS_TEST) {
+    document.title = 'DASS HOME · ТЕСТ';
+    var bar = document.createElement('div');
+    bar.textContent = 'ТЕСТОВЫЙ КОНТУР — данные не попадают в рабочий учёт';
+    bar.setAttribute('role', 'status');
+    bar.style.cssText = 'position:fixed;left:0;right:0;bottom:0;z-index:9999;background:#b3261e;color:#fff;font:600 12px/1.2 system-ui,sans-serif;text-align:center;letter-spacing:.04em;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))';
+    document.body.appendChild(bar);
+  }
 
   var loginView = document.getElementById('loginView');
   var appView = document.getElementById('appView');
@@ -173,7 +186,7 @@
     appView.hidden = false;
     shellUserName.textContent = session.name || session.login || '';
     var page = PAGES[session.role] || 'owner.html';
-    var src = page + '?token=' + encodeURIComponent(session.token) + '&name=' + encodeURIComponent(session.name || '');
+    var src = page + '?token=' + encodeURIComponent(session.token) + '&name=' + encodeURIComponent(session.name || '') + (IS_TEST ? '&env=test' : '');
     loading.setAttribute('data-show', 'true');
     frame.setAttribute('data-src', src);
     frame.src = src;

@@ -508,7 +508,9 @@
 (function(){
   "use strict";
   /* ============ API CLIENT (владелец) ============ */
-  var API_BASE = 'https://script.google.com/macros/s/AKfycbxJWwv2rbycjNHdILaqaw6w6qZDChHmqk-JtaA8t3SmAEaTsQUV_BbS2Yar9-ahut8/exec';
+  var API_BASE = /[?&]env=test(&|$)/.test(location.search)
+    ? 'https://script.google.com/macros/s/AKfycbz36SRB8Pm5XvEpjTjnim6RgVeB2Ek4R25s0Bz-Lb7DIhYvnlq1TKCx0ARNB34JWIjN-w/exec'   /* тестовый контур */
+    : 'https://script.google.com/macros/s/AKfycbxJWwv2rbycjNHdILaqaw6w6qZDChHmqk-JtaA8t3SmAEaTsQUV_BbS2Yar9-ahut8/exec';
   var AUTH = (function(){
     var m = /[?&]token=([^&]+)/.exec(location.search);
     return {
