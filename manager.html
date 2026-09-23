@@ -501,33 +501,66 @@
   function apiSessionExpired(){
     try { parent.postMessage({ type: 'dass-session-expired' }, '*'); } catch(e){}
   }
+  /* Логин текущего менеджера — для фильтра «Мои / Все». Берём из URL (index.html передаёт &login=),
+     иначе из сохранённой сессии того же сайта. */
+  AUTH.login = (function(){
+    var mm = /[?&]login=([^&]+)/.exec(location.search);
+    if (mm) return decodeURIComponent(mm[1]);
+    try {
+      var sk = /[?&]env=test(&|$)/.test(location.search) ? 'dass_home_session_test' : 'dass_home_session';
+      var s = JSON.parse(localStorage.getItem(sk) || 'null');
+      if (s && s.token === AUTH.token && s.login) return String(s.login);
+    } catch(e){}
+    return '';
+  })();
+
+  /* Apps Script под нагрузкой иногда отвечает HTML-страницей вместо JSON или теряет тело запроса
+     («Требуется вход» при живой сессии). Такие ответы повторяем ОДИН раз — для операций с тем же
+     ключом идемпотентности, поэтому двойной записи не будет. Если не помогло — «Система занята». */
+  var API_BUSY_MSG = 'Система занята, попробуйте ещё раз через минуту.';
+  function apiIsTransient(j){
+    if (!j) return true;                                  /* не JSON (HTML-страница ошибки) или сеть */
+    return !j.ok && /Требуется вход/i.test(j.error || '') && !!AUTH.token;
+  }
+  function apiFetchJson(doFetch){
+    function once(){
+      return doFetch()
+        .then(function (r) { return r.text(); })
+        .then(function (t) { try { return JSON.parse(t); } catch (e) { return null; } })
+        .catch(function () { return null; });
+    }
+    return once().then(function (j) {
+      if (!apiIsTransient(j)) return j;
+      return new Promise(function (res) { setTimeout(res, 1500); }).then(once).then(function (j2) {
+        if (apiIsTransient(j2)) throw new Error(API_BUSY_MSG);
+        return j2;
+      });
+    }).then(function (j) {
+      if (!j.ok) {
+        if (/вход в систему|Сессия истекла/i.test(j.error || '')) apiSessionExpired();
+        throw new Error(j.error || 'Ошибка API');
+      }
+      return j;
+    });
+  }
   function apiGet(action, params){
     var qs = ['action=' + encodeURIComponent(action), 'token=' + encodeURIComponent(AUTH.token)];
     for (var k in (params || {})) { if (params[k] !== undefined && params[k] !== null) qs.push(encodeURIComponent(k) + '=' + encodeURIComponent(params[k])); }
-    return fetch(API_BASE + '?' + qs.join('&'), { method: 'GET' })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j.ok) {
-          if (/вход в систему|Сессия истекла/i.test(j.error || '')) apiSessionExpired();
-          throw new Error(j.error || 'Ошибка API');
-        }
-        return j.data;
-      });
+    return apiFetchJson(function(){ return fetch(API_BASE + '?' + qs.join('&'), { method: 'GET' }); })
+      .then(function (j) { return j.data; });
   }
   function apiSubmit(op, payload){
     var key = op + '-' + Date.now() + '-' + Math.random().toString(36).slice(2, 8);
-    return fetch(API_BASE, {
-      method: 'POST',
-      body: JSON.stringify({ action: 'submit', op: op, payload: payload, key: key, token: AUTH.token })
-    })
-      .then(function (r) { return r.json(); })
-      .then(function (j) {
-        if (!j.ok) {
-          if (/вход в систему|Сессия истекла/i.test(j.error || '')) apiSessionExpired();
-          throw new Error(j.error || 'Ошибка API');
-        }
-        return j;
-      });
+    var body = JSON.stringify({ action: 'submit', op: op, payload: payload, key: key, token: AUTH.token });
+    return apiFetchJson(function(){ return fetch(API_BASE, { method: 'POST', body: body }); });
+  }
+  /* Полный текст ответа сервера (подсказки о складе резерва и т.п.) — показываем как есть. */
+  function serverText(data){
+    if (!data) return '';
+    var parts = [];
+    if (data.error) parts.push(String(data.error));
+    if (data.msg && parts.indexOf(String(data.msg)) < 0) parts.push(String(data.msg));
+    return parts.join(' ');
   }
   /* Кэш справочников на время сессии страницы — сбрасывается через API_CACHE.invalidate() после операций */
   var API_CACHE = {
@@ -702,33 +735,48 @@
   TEMPLATES['zakaz-edit'] = function(){
     return '<div class="field-set">'+
       '<div class="field"><label>Заказ <span class="req">*</span></label><select id="editOrderSelect" required>'+skeletonHtml(1)+'</select>'+
-      '<span class="field-hint">Меняется только невыданный остаток — выданное количество заблокировано.</span></div>'+
+      '<span class="field-hint">Меняется только невыданное: количество, а в строках без выдачи — ещё товар и склад.</span></div>'+
       '<div id="editLinesSlot" class="lines-list"></div>'+
       '<div class="field"><label>Плановая дата выдачи</label><input type="date" id="editPlannedInput"></div>'+
       '<div class="field"><label>Комментарий</label><textarea id="editCommentInput" placeholder="Что изменилось в заказе"></textarea></div></div>';
   };
-  function renderEditLines(area, items){
+  var EDIT_WAREHOUSES = [['WH-01','WH-01 · Шоурум'], ['WH-02','WH-02 · Основной склад']];
+  function renderEditLines(area, items, products){
     var slot = area.querySelector('#editLinesSlot');
     if(!slot) return;
     if(!items.length){ slot.innerHTML = '<p class="field-hint">В заказе нет строк.</p>'; return; }
+    products = products || [];
     slot.innerHTML = items.map(function(it){
-      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(it.sku,(it.name||'?').charAt(0).toUpperCase())+' '+it.name+'</div>'+
-        '<div class="line-sub">Выдано: '+it.issued+' · Заказано: '+it.ordered+'</div></div></div>'+
-        '<div class="line-grid"><div class="field"><label>Новое кол-во</label><input type="number" min="'+it.issued+'" value="'+it.ordered+'" data-line-id="'+it.lineId+'" data-issued="'+it.issued+'" class="editQtyInput"></div>'+
-        '<div class="field"><label>Уже выдано</label><input type="text" readonly value="'+it.issued+'"></div></div></div>';
+      var issued = Number(it.issued)||0, locked = issued > 0;
+      var dis = locked ? ' disabled' : '';
+      var skuOpts = products.map(function(p){
+        return '<option value="'+esc(p.sku)+'"'+(p.sku===it.sku?' selected':'')+'>'+esc(p.sku)+' · '+esc(p.name)+' · '+fmt(p.price)+' сум (доступно '+(Number(p.physical)||0)+')</option>';
+      }).join('');
+      if(!products.some(function(p){ return p.sku===it.sku; })) skuOpts = '<option value="'+esc(it.sku)+'" selected>'+esc(it.sku)+' · '+esc(it.name)+'</option>' + skuOpts;
+      var whList = EDIT_WAREHOUSES.slice();
+      if(it.warehouse && !whList.some(function(w){ return w[0]===it.warehouse; })) whList.unshift([it.warehouse, it.warehouse]);
+      var whOpts = whList.map(function(w){ return '<option value="'+esc(w[0])+'"'+(w[0]===it.warehouse?' selected':'')+'>'+esc(w[1])+'</option>'; }).join('');
+      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(esc(it.sku),(it.name||'?').charAt(0).toUpperCase())+' '+esc(it.name)+'</div>'+
+        '<div class="line-sub">Выдано: '+issued+' · Заказано: '+it.ordered+' · Склад: '+esc(it.warehouse||'—')+'</div></div></div>'+
+        '<div class="grid-2"><div class="field"><label>Товар</label><select class="editSkuSelect" data-line-id="'+esc(it.lineId)+'" data-orig="'+esc(it.sku)+'"'+dis+'>'+skuOpts+'</select></div>'+
+        '<div class="field"><label>Склад</label><select class="editWhSelect" data-line-id="'+esc(it.lineId)+'" data-orig="'+esc(it.warehouse||'')+'"'+dis+'>'+whOpts+'</select></div></div>'+
+        (locked ? '<p class="field-hint">Часть товара уже выдана — товар и склад в этой строке менять нельзя.</p>' : '')+
+        '<div class="line-grid"><div class="field"><label>Новое кол-во</label><input type="number" min="'+issued+'" value="'+it.ordered+'" data-line-id="'+esc(it.lineId)+'" data-issued="'+issued+'" data-ordered="'+it.ordered+'" data-locked="'+(locked?'1':'0')+'" class="editQtyInput"></div>'+
+        '<div class="field"><label>Уже выдано</label><input type="text" readonly value="'+issued+'"></div></div></div>';
     }).join('');
   }
   function initZakazEdit(area){
     var sel = area.querySelector('#editOrderSelect');
-    API_CACHE.orders().then(function(orders){
+    Promise.all([API_CACHE.orders(), API_CACHE.products()]).then(function(res){
+      var orders = res[0], products = res[1];
       var open = orders.filter(function(o){ return o.status !== 'Отменён'; });
       if(!sel) return;
       if(!open.length){ sel.innerHTML = '<option value="">Нет заказов для изменения</option>'; return; }
-      sel.innerHTML = open.map(function(o){ return '<option value="'+o.id+'">№'+o.id+'</option>'; }).join('');
+      sel.innerHTML = open.map(function(o){ return '<option value="'+esc(o.id)+'">№'+esc(o.id)+(o.manager ? ' · '+(isMyOrder(o)?'мой':esc(o.manager)) : '')+' · '+esc(o.productStatus||'')+'</option>'; }).join('');
       function loadItems(){
         var slot = area.querySelector('#editLinesSlot');
         if(slot) slot.innerHTML = skeletonHtml(2);
-        apiGet('orderItems', { order_id: sel.value }).then(function(items){ renderEditLines(area, items); })
+        apiGet('orderItems', { order_id: sel.value }).then(function(items){ renderEditLines(area, items, products); })
           .catch(function(e){ if(slot) slot.innerHTML = emptyState('Не удалось загрузить позиции', e.message||''); });
       }
       sel.addEventListener('change', loadItems);
@@ -933,7 +981,7 @@
   /* ============ INFORMATION ============ */
   var NAV_INFO = [
     {id:'katalog', num:1, title:'Каталог', short:'Каталог', hint:'Цены и наличие. Себестоимости здесь нет.'},
-    {id:'moi-zakazy', num:2, title:'Мои заказы', short:'Заказы', hint:'Статус оплаты, долг и что осталось выдать.'},
+    {id:'moi-zakazy', num:2, title:'Заказы', short:'Заказы', hint:'Все заказы шоурума: менеджер, оплата, долг, что осталось выдать. Фильтр «Мои / Все».'},
     {id:'kassa-info', num:3, title:'Касса', short:'Касса', hint:'Моя касса и последние движения.'},
     {id:'klienty', num:4, title:'Клиенты', short:'Клиенты', hint:'Список клиентов с контактами и историей заказов.'}
   ];
@@ -978,6 +1026,9 @@
     if (o.productStatus && o.productStatus !== 'Выдан полностью') return ['partial', 'К выдаче'];
     return ['closed', 'Закрыт'];
   }
+  function isMyOrder(o){ return !!AUTH.login && String(o.manager||'').toLowerCase() === AUTH.login.toLowerCase(); }
+  /* Фильтр «Мои / Все» — по умолчанию «Все»; выбор запоминается только в этом браузере. */
+  var ordersScope = (function(){ try { return localStorage.getItem('dass_mgr_orders_scope') === 'mine' ? 'mine' : 'all'; } catch(e){ return 'all'; } })();
   function renderMoiZakazy(){
     var area = document.getElementById('infoArea');
     area.innerHTML = skeletonHtml(4);
@@ -985,11 +1036,30 @@
       var orders = res[0], clients = res[1];
       var byId = {}; clients.forEach(function(c){ byId[c.id] = c.name; });
       if(!orders.length){ area.innerHTML = emptyState('Заказов пока нет', 'Оформите новый заказ в разделе Операции → Заказы'); return; }
-      var body = orders.map(function(o){
-        var pill = orderPillState(o);
-        return '<tr><td>'+o.id+'</td><td>'+(byId[o.clientId]||o.clientId)+'</td><td class="num">'+fmt(o.total)+'</td><td class="num">'+fmt(o.paid)+'</td><td class="num">'+fmt(o.debt)+'</td><td><span class="pill '+pill[0]+'">'+pill[1]+'</span></td></tr>';
-      }).join('');
-      area.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>№</th><th>Клиент</th><th>Сумма</th><th>Оплачено</th><th>Долг</th><th>Статус</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+      var mineN = orders.filter(isMyOrder).length;
+      var list = ordersScope === 'mine' ? orders.filter(isMyOrder) : orders;
+      var seg = '<div class="chip-row" id="ordersScopeRow" style="margin-bottom:12px">'+
+        '<button type="button" class="chip" data-scope="all" aria-pressed="'+(ordersScope==='all')+'">Все · '+orders.length+'</button>'+
+        '<button type="button" class="chip" data-scope="mine" aria-pressed="'+(ordersScope==='mine')+'"'+(AUTH.login?'':' disabled title="Логин не определён — перезайдите"')+'>Мои · '+mineN+'</button></div>';
+      var table;
+      if(!list.length){ table = emptyState('Ваших заказов нет', 'Переключитесь на «Все», чтобы увидеть заказы других менеджеров'); }
+      else {
+        var body = list.map(function(o){
+          var pill = orderPillState(o);
+          var mgr = isMyOrder(o) ? '<strong>Вы</strong>' : esc(o.manager || '—');
+          return '<tr><td>'+esc(o.id)+'</td><td>'+esc(byId[o.clientId]||o.clientId)+'</td><td>'+mgr+'</td><td class="num">'+fmt(o.total)+'</td><td class="num">'+fmt(o.paid)+'</td><td class="num">'+fmt(o.debt)+'</td><td><span class="pill '+pill[0]+'">'+pill[1]+'</span></td></tr>';
+        }).join('');
+        table = '<div class="table-wrap"><table class="lines"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Сумма</th><th>Оплачено</th><th>Долг</th><th>Статус</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+      }
+      area.innerHTML = seg + table;
+      area.querySelectorAll('#ordersScopeRow [data-scope]').forEach(function(b){
+        b.addEventListener('click', function(){
+          if(b.disabled) return;
+          ordersScope = b.dataset.scope;
+          try { localStorage.setItem('dass_mgr_orders_scope', ordersScope); } catch(e){}
+          renderMoiZakazy();
+        });
+      });
       attachRowContext(area);
     }).catch(function(e){
       area.innerHTML = emptyState('Не удалось загрузить заказы', e.message || 'Проверьте соединение и попробуйте ещё раз');
@@ -1134,7 +1204,7 @@
   }
   function opsKey(){ return state.opsSubmode ? (state.opsNavId+'-'+state.opsSubmode) : state.opsNavId; }
 
-  function renderOpsPanel(){
+  function renderOpsPanel(opts){
     var item = findNav(NAV_OPS, state.opsNavId);
     document.getElementById('crumbOp').textContent = item.short;
     document.getElementById('opTitle').textContent = item.title;
@@ -1147,7 +1217,7 @@
 
     var area = document.getElementById('formArea');
     area.innerHTML = skeletonHtml(4);
-    resetStatus();
+    if(!(opts && opts.keepStatus)) resetStatus();
     setTimeout(function(){
       var key = opsKey();
       var tpl = TEMPLATES[key];
@@ -1250,12 +1320,25 @@
     if(key==='zakaz-edit'){
       var esel = area.querySelector('#editOrderSelect');
       if(!esel || !esel.value) return { error: 'Выберите заказ.' };
-      var elines = [];
+      var elines = [], eerr = '';
       area.querySelectorAll('.editQtyInput').forEach(function(inp){
+        var lid = inp.dataset.lineId;
         var qty = Number(inp.value)||0;
-        var issued = Number(inp.dataset.issued)||0;
-        if(qty !== issued){ elines.push({ line_id: inp.dataset.lineId, qty: qty }); }
+        var issued = Number(inp.dataset.issued)||0, ordered = Number(inp.dataset.ordered)||0;
+        if(qty < issued){ eerr = 'Строка '+lid+': количество не может быть меньше уже выданного ('+issued+').'; return; }
+        var line = { line_id: lid }, changed = false;
+        if(qty !== ordered){ line.qty = qty; changed = true; }
+        if(inp.dataset.locked !== '1'){
+          var skuSel = area.querySelector('.editSkuSelect[data-line-id="'+lid+'"]');
+          var whSel = area.querySelector('.editWhSelect[data-line-id="'+lid+'"]');
+          if(skuSel && whSel){
+            if(skuSel.value !== skuSel.dataset.orig || whSel.value !== whSel.dataset.orig) changed = true;
+            line.sku = skuSel.value; line.warehouse = whSel.value;
+          }
+        }
+        if(changed) elines.push(line);
       });
+      if(eerr) return { error: eerr };
       if(!elines.length) return { error: 'Нет изменений в позициях заказа.' };
       return { payload: { order_id: esel.value, lines: elines,
         planned: (area.querySelector('#editPlannedInput')||{}).value || '',
@@ -1328,7 +1411,8 @@
       var built = buildRealPayload(key, area);
       if(built.error){ setStatus('error', built.error); btn.innerHTML=prevHtml; btn.disabled=false; btn.dataset.loading='false'; return; }
       apiSubmit(realOp, built.payload).then(function(res){
-        var data = res.data;
+        var data = res.data || {};
+        if(res.msg && !data.msg) data.msg = res.msg;
         if(key!=='zakaz-new' || built.payNow <= 0 || !data || data.status==='Ошибка' || !data.resultId){
           return data;
         }
@@ -1352,23 +1436,26 @@
         /* Бэкенд может ответить ok:true, но status:"Ошибка" (например, не хватает товара на складе) —
            это не HTTP-сбой, а бизнес-отказ операции, и его нельзя показывать как успех. */
         if(!data || data.status === 'Ошибка'){
-          setStatus('error', '<div><strong>Операция отклонена.</strong> '+((data && data.error) || 'Неизвестная ошибка.')+'</div>');
+          setStatus('error', '<div><strong>Операция отклонена.</strong> '+esc(serverText(data) || 'Неизвестная ошибка.')+'</div>');
           btn.innerHTML = prevHtml; btn.disabled=false; btn.dataset.loading='false';
           return;
         }
         var opTitleEl = document.getElementById('opTitle');
         var opLabel = opTitleEl ? opTitleEl.textContent : 'Операция';
         var docId = data.resultId || data.requestId || '';
-        setStatus('success', '<div><strong>Отправлено.</strong> '+(data.error || ('№'+docId+' зарегистрирован.'))+'</div>');
+        var srvTxt = serverText(data) || (data.duplicate ? 'Эта операция уже была проведена ранее — повторно не записана.' : '');
+        setStatus('success', '<div><strong>Отправлено.</strong> '+esc(srvTxt || ('№'+docId+' зарегистрирован.'))+'</div>');
         pushRecentOp(docId, opLabel);
         clearDraft(key);
         area.querySelectorAll('input[type=text]:not([readonly]), input[type=number]:not([readonly]), textarea').forEach(function(el){ el.value=''; });
         /* Список заказов/остатков устарел после операции — перерисуем форму с задержкой,
            чтобы человек успел прочитать сообщение об успехе, прежде чем оно сменится на «idle». */
-        setTimeout(function(){ if(opsKey()===key) renderOpsPanel(); }, 1800);
+        /* Текст ответа сервера (например, «зарезервировано на складе WH-02…») остаётся на экране после перерисовки формы. */
+        setTimeout(function(){ if(opsKey()===key) renderOpsPanel({ keepStatus: true }); }, 1800);
         btn.innerHTML = prevHtml; btn.disabled=false; btn.dataset.loading='false';
       }).catch(function(e){
-        setStatus('error', '<div><strong>Ошибка API.</strong> '+(e.message||e)+'</div>');
+        var em = String(e && e.message || e);
+        setStatus('error', '<div><strong>'+(em===API_BUSY_MSG ? 'Операция не отправлена.' : 'Ошибка API.')+'</strong> '+esc(em)+'</div>');
         btn.innerHTML = prevHtml; btn.disabled=false; btn.dataset.loading='false';
       });
       return;
@@ -1629,7 +1716,7 @@
       SPARK_DATA = series; drawSpark();
 
       var active = orders.filter(function(o){ return String(o.status)!=='Отменён'; });
-      var month = active.filter(function(o){ var d = new Date(o.created); return !isNaN(d) && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
+      var month = active.filter(function(o){ if(AUTH.login && !isMyOrder(o)) return false; var d = new Date(o.created); return !isNaN(d) && d.getFullYear()===now.getFullYear() && d.getMonth()===now.getMonth(); });
       var debt = active.reduce(function(a,o){ return a + Math.max(Number(o.debt)||0, 0); }, 0);
       var monthSum = month.reduce(function(a,o){ return a + (Number(o.total)||0); }, 0);
       var notIssued = function(o){ return o.productStatus && o.productStatus !== 'Выдан полностью'; };

@@ -186,7 +186,7 @@
     appView.hidden = false;
     shellUserName.textContent = session.name || session.login || '';
     var page = PAGES[session.role] || 'owner.html';
-    var src = page + '?token=' + encodeURIComponent(session.token) + '&name=' + encodeURIComponent(session.name || '') + (IS_TEST ? '&env=test' : '');
+    var src = page + '?token=' + encodeURIComponent(session.token) + '&name=' + encodeURIComponent(session.name || '') + '&login=' + encodeURIComponent(session.login || '') + (IS_TEST ? '&env=test' : '');
     loading.setAttribute('data-show', 'true');
     frame.setAttribute('data-src', src);
     frame.src = src;
