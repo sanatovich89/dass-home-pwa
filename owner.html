@@ -380,7 +380,6 @@
     <h4>Быстрые действия</h4>
     <button class="drawer-action" id="drawerProvesti" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4.5 10.5l3.3 3.3L15.5 6" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>Провести текущую операцию</button>
     <button class="drawer-action" id="drawerClear" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg>Очистить форму</button>
-    <button class="drawer-action" id="drawerSync" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M4 10a6 6 0 0110-4.2M16 10a6 6 0 01-10 4.2" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/><path d="M13.2 4.5h2.6v2.6M6.8 15.5H4.2v-2.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Синхронизировать MANAGERS</button>
     <button class="drawer-action" id="drawerLogout" type="button"><svg viewBox="0 0 20 20" fill="none"><path d="M8 4H5a1 1 0 00-1 1v10a1 1 0 001 1h3M13 7l3 3-3 3M16 10H8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>Выйти</button>
   </div>
   <div class="drawer-section">
@@ -650,9 +649,9 @@
       '<div class="field"><label>Ед. измерения</label><select id="tnUnit"><option selected>шт</option><option>комплект</option><option>м</option><option>м2</option><option>пог.м</option><option>рулон</option><option>упак</option></select></div>'+
       '<div class="field"><label>Поставщик <span class="req">*</span></label><select required id="tnSupplier"><option value="">Загрузка…</option></select></div></div>'+
       '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnPrice" placeholder="4 200 000"><span class="suffix">сум</span></div></div>'+
-      '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnCost" placeholder="2 850 000"><span class="suffix">сум</span></div><span class="field-hint">Не передаётся в файл MANAGERS</span></div></div>'+
+      '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnCost" placeholder="2 850 000"><span class="suffix">сум</span></div><span class="field-hint">Не видна менеджерам</span></div></div>'+
       '<div class="grid-2"><div class="field"><label>Фото товара</label>'+dropzoneHtml('tovarPhotoNew')+'<span class="field-hint">Загрузка фото в API пока не подключена — можно добавить ссылку на фото ниже</span><input type="text" id="tnPhoto" placeholder="Ссылка на фото (необязательно)" style="margin-top:8px"></div>'+
-      '<div class="field"><label>Активен</label><select id="tnActive"><option value="Да" selected>Да — виден в MANAGERS</option><option value="Нет">Нет — снят с продажи</option></select></div></div>'+
+      '<div class="field"><label>Активен</label><select id="tnActive"><option value="Да" selected>Да — виден менеджерам</option><option value="Нет">Нет — снят с продажи</option></select></div></div>'+
       '<div class="field"><label>Характеристики</label><textarea id="tnChars" placeholder="Дуб натуральный, 220×95×78 см, съёмные чехлы"></textarea></div></div>';
   };
   function fillSupplierSelect(sel, dir, selectedId){
@@ -680,7 +679,7 @@
       '<div class="field"><label>Поставщик</label><select id="teSupplier">'+dir.filter(function(d){return d.type==='Поставщик';}).map(function(s){ return '<option value="'+s.id+'"'+(String(s.id)===String(p.supplierId)?' selected':'')+'>'+s.name+'</option>'; }).join('')+'</select></div></div>'+
       '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tePrice" value="'+p.price+'"><span class="suffix">сум</span></div></div>'+
       '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="teCost" value="'+p.cost+'"><span class="suffix">сум</span></div></div></div>'+
-      '<div class="field"><label>Активен</label><select id="teActive"><option value="Да"'+(p.active?' selected':'')+'>Да — виден в MANAGERS</option><option value="Нет"'+(!p.active?' selected':'')+'>Нет — снят с продажи</option></select></div>'+
+      '<div class="field"><label>Активен</label><select id="teActive"><option value="Да"'+(p.active?' selected':'')+'>Да — виден менеджерам</option><option value="Нет"'+(!p.active?' selected':'')+'>Нет — снят с продажи</option></select></div>'+
       '<div class="field"><label>Характеристики</label><textarea id="teChars">'+(p.chars||'')+'</textarea></div>';
   }
   function initTovarEdit(area){
@@ -946,7 +945,7 @@
       if(!rows.length){ slot.innerHTML = emptyState('Нет ожидающих переводов', 'Все переводы от менеджеров уже подтверждены'); return; }
       slot.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>Дата</th><th>Отправитель</th><th>Сумма</th><th>Способ</th><th>Комментарий</th><th></th></tr></thead><tbody>'+
         rows.map(function(t){ return '<tr data-transfer-id="'+t.id+'"><td>'+t.created+'</td><td>'+t.sentBy+'</td><td class="num">'+fmt(t.amount)+' сум</td><td>'+t.method+'</td><td>'+(t.comment||'')+'</td><td><button type="button" class="row-confirm" data-confirm-id="'+t.id+'">Подтвердить</button></td></tr>'; }).join('')+
-        '</tbody></table></div><p class="field-hint" style="margin-top:10px">Подтверждение увеличивает основную кассу и закрывает перевод в файле MANAGERS одним действием.</p>';
+        '</tbody></table></div><p class="field-hint" style="margin-top:10px">Подтверждение увеличивает основную кассу и закрывает перевод менеджеров одним действием.</p>';
       slot.querySelectorAll('[data-confirm-id]').forEach(function(btn){
         btn.addEventListener('click', function(){
           if(btn.dataset.loading==='true') return;
@@ -1132,7 +1131,7 @@
           return '<tr class="clickable" data-id="'+p.id+'"><td>'+skuTag(p.sku,letter)+'</td><td>'+p.name+'</td><td>'+p.category+'</td><td class="num">'+fmt(p.price)+'</td><td class="num">'+fmt(p.cost)+'</td><td>'+p.supplier+'</td><td class="num">'+p.physical+'</td><td>'+(p.active?'<span class="pill open">Активен</span>':'<span class="pill closed">Неактивен</span>')+'</td></tr>';
         }).join('');
         wrap.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>SKU</th><th>Название</th><th>Категория</th><th>Цена</th><th>Себестоимость</th><th>Поставщик</th><th>Остаток</th><th>Статус</th></tr></thead><tbody>'+rows+'</tbody></table></div>'+
-          '<p class="field-hint" style="margin-top:10px">Себестоимость видна только здесь — в файле MANAGERS этой колонки нет.</p>';
+          '<p class="field-hint" style="margin-top:10px">Себестоимость видна только здесь — менеджерам она не передаётся.</p>';
         wrap.querySelectorAll('tr[data-id]').forEach(function(tr){
           tr.addEventListener('click', function(){
             var p = products.filter(function(x){ return String(x.id)===tr.dataset.id; })[0];
@@ -1683,13 +1682,6 @@
 
   document.getElementById('drawerProvesti').addEventListener('click', function(){ closeDrawer(); setMode('ops'); document.getElementById('btnProvesti').click(); });
   document.getElementById('drawerClear').addEventListener('click', function(){ closeDrawer(); setMode('ops'); document.getElementById('btnClear').click(); });
-  document.getElementById('drawerSync').addEventListener('click', function(){
-    closeDrawer();
-    setStatus('idle', 'Синхронизация с файлом MANAGERS…');
-    apiGet('syncManagers').then(function(){
-      setStatus('success', '<div><strong>Синхронизировано.</strong> Товары, цены и остатки обновлены в файле MANAGERS (без себестоимости).</div>');
-    }).catch(function(e){ setStatus('error', 'Синхронизация не выполнена: '+(e.message||e)); });
-  });
   updateMenuDot();
 
   document.getElementById('roleLabel').textContent = 'Владелец' + (AUTH.name ? ' · ' + AUTH.name : '');
@@ -1748,7 +1740,7 @@
   }, {passive:true});
 
   var COACH_STEPS = [
-    {t:'Меню и быстрые действия', s:'Кнопка слева в шапке открывает боковое меню: провести операцию, синхронизировать MANAGERS, сменить тему и посмотреть последние документы.'},
+    {t:'Меню и быстрые действия', s:'Кнопка слева в шапке открывает боковое меню: провести операцию, сменить тему и посмотреть последние документы.'},
     {t:'Разделы одним касанием', s:'Круглые иконки под карточкой кассы — это разделы: Товар, Склад, Закуп, Касса, Справочник. Переключение между Операциями и Информацией — вверху.'}
   ];
   var coachIdx = 0;

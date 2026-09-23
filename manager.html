@@ -412,7 +412,7 @@
       <div class="notif-wrap">
         <button class="icon-btn-lite" type="button" id="menuBtn" aria-label="Меню" aria-expanded="false"><svg viewBox="0 0 20 20" fill="none"><path d="M3 5.5h14M3 10h14M3 14.5h14" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/></svg><span class="notif-dot" id="menuDot" hidden></span></button>
       </div>
-      <div class="hero-title"><h1>DASS HOME</h1><p id="dateChip">Файл MANAGERS</p></div>
+      <div class="hero-title"><h1>DASS HOME</h1><p id="dateChip">Менеджер</p></div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="icon-btn-lite" type="button" id="searchBtn" aria-label="Поиск"><svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
@@ -571,7 +571,7 @@
     invalidate: function(){ this._p=null; this._c=null; this._o=null; setTimeout(function(){ if(typeof refreshSummary==='function') refreshSummary(); }, 1500); }
   };
 
-  document.getElementById('dateChip').textContent = 'Файл MANAGERS · ' + new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
+  document.getElementById('dateChip').textContent = 'Менеджер · ' + new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
   function skuTag(code,letter){ return '<span class="sku-tag"><span class="dot">'+letter+'</span>'+code+'</span>'; }
   function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
