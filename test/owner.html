@@ -361,11 +361,39 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   .row-ctx-menu{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);box-shadow:var(--shadow-2);padding:6px;display:flex;flex-direction:column;min-width:170px}
   .row-ctx-menu button{background:none;border:none;text-align:left;padding:9px 10px;border-radius:var(--radius-s);font:600 12px/1 'Public Sans',sans-serif;color:var(--text);cursor:pointer}
   .row-ctx-menu button:hover{background:var(--surface-2)}
+  /* ---- Карточка товара (Этап 2): лист снизу поверх каталога ---- */
+  table.lines tbody tr[data-id]{cursor:pointer}
+  table.lines tbody tr[data-id]:hover{background:var(--surface-2)}
+  .pcard-overlay{position:fixed;inset:0;background:rgba(20,15,10,.45);z-index:45;display:none;align-items:flex-end;justify-content:center}
+  .pcard-overlay[data-open="true"]{display:flex}
+  .pcard{background:var(--surface);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:var(--radius-l) var(--radius-l) 0 0;box-shadow:var(--shadow-2);padding:10px 18px calc(18px + env(safe-area-inset-bottom));animation:pcardUp .22s ease}
+  @keyframes pcardUp{from{transform:translateY(100%)}to{transform:none}}
+  .pcard-grip{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
+  .pcard-photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius-m);background:var(--surface-2);display:block;border:1px solid var(--border-soft)}
+  .pcard-ph{width:100%;aspect-ratio:4/3;border-radius:var(--radius-m);background:var(--surface-2);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;color:var(--text-faint);font:700 48px/1 'Sora',sans-serif}
+  .pcard h2{font:700 18px/1.3 'Sora',sans-serif;margin:14px 0 8px;color:var(--text)}
+  .pcard-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;font-size:12.5px;color:var(--text-muted)}
+  .pcard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .pcard-stat:last-child:nth-child(odd){grid-column:1/-1}
+  .pcard-stat{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-s);padding:12px}
+  .pcard-stat .l{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+  .pcard-stat .v{font:700 17px/1.2 'Sora',sans-serif;color:var(--text)}
+  .pcard-wh{margin-bottom:16px}
   #receiptPrintArea{display:none}
   @media print{
     body *{visibility:hidden}
     #receiptPrintArea,#receiptPrintArea *{visibility:visible}
     #receiptPrintArea{display:block;position:fixed;top:0;left:0;width:100%;padding:24px;font:14px/1.5 'Public Sans',sans-serif;color:#111}
+    /* Ценник товара: на А4 — карточка 90×60 мм с рамкой для вырезания, на узкой ленте — во всю ширину */
+    .pt{width:90mm;min-height:60mm;box-sizing:border-box;border:.75pt dashed #000;padding:5mm 6mm;display:flex;flex-direction:column;gap:2mm;page-break-inside:avoid;break-inside:avoid}
+    .pt-brand{display:flex;justify-content:space-between;align-items:baseline;gap:4mm;font:700 9pt/1 'Sora',Arial,sans-serif;letter-spacing:.08em;border-bottom:.75pt solid #000;padding-bottom:1.5mm}
+    .pt-brand span{font:400 7pt/1 'Public Sans',Arial,sans-serif;letter-spacing:0}
+    .pt-name{font:700 13pt/1.2 'Sora',Arial,sans-serif;margin-top:1mm;overflow-wrap:anywhere}
+    .pt-meta{font-size:8pt;color:#333}
+    .pt-price{margin-top:auto;font:800 24pt/1.05 'Sora',Arial,sans-serif;white-space:nowrap}
+    .pt-price small{font-size:12pt;font-weight:700}
+    .pt-l{font-size:7.5pt;text-transform:uppercase;letter-spacing:.05em;color:#333}
+    .pt-alt{font-size:9pt;border-top:.5pt solid #999;padding-top:1.5mm}
   }
 
   @media (max-width:480px){
@@ -437,6 +465,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   </div>
 </div>
 <div id="receiptPrintArea"></div>
+<div class="pcard-overlay" id="pcardOverlay" data-open="false"><div class="pcard" id="pcard" role="dialog" aria-modal="true" aria-label="Карточка товара"></div></div>
 <div class="app">
   <div class="topbar-lite">
     <div class="hero-brand">
@@ -1266,25 +1295,36 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     });
   }
 
+  /* ---- Карточка товара — как у менеджера: лист снизу поверх каталога. Владельцу дополнительно видны
+     себестоимость, поставщик и остатки по складам. ---- */
+  var PRINT_ICON = '<svg viewBox="0 0 20 20" fill="none"><path d="M6 7V3.5h8V7M6 14H4.5a1 1 0 01-1-1V8a1 1 0 011-1h11a1 1 0 011 1v5a1 1 0 01-1 1H14" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 11.5h8v5H6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  var pcardOverlay = document.getElementById('pcardOverlay');
+  function hasOrderPrice(p){ return !(p.orderPrice === undefined || p.orderPrice === '' || p.orderPrice === null); }
   function renderProductCard(p){
-    var area = document.getElementById('infoArea');
-    document.getElementById('opTitle').textContent = 'Карточка товара';
-    document.getElementById('opHint').textContent = p.sku+' · открыто из Каталога';
-    var letter=(p.name||'?').charAt(0).toUpperCase();
-    var photoHtml = p.photo ? '<img class="pc-photo" src="'+esc(p.photo)+'" alt="">' : '<div class="pc-photo-placeholder">'+letter+'</div>';
-    area.innerHTML = '<button class="back-link" id="backToKatalog">← Назад к каталогу</button>'+
-      '<div class="product-card">'+
-        '<div class="pc-head">'+photoHtml+'<div style="flex:1"><h3>'+p.name+'</h3><div class="pc-badges"><span class="type-badge">'+p.category+'</span>'+skuTag(p.sku,letter)+(p.active?'<span class="pill open">Активен</span>':'<span class="pill closed">Неактивен</span>')+'</div></div>'+
-        '<div style="text-align:right"><div class="field-hint">Поставщик</div><div style="font:600 14px \'Public Sans\',sans-serif">'+p.supplier+'</div></div></div>'+
-        '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">'+
-          '<div class="stat-tile"><div class="l">Цена в шоуруме</div><div class="v">'+fmt(p.price)+' сум</div></div>'+
-          '<div class="stat-tile"><div class="l">Цена на заказ</div><div class="v">'+fmt(p.orderPrice!==undefined&&p.orderPrice!==null&&p.orderPrice!==''?p.orderPrice:p.price)+' сум</div></div>'+
-          '<div class="stat-tile"><div class="l">Себестоимость</div><div class="v">'+fmt(p.cost)+' сум</div></div>'+
-          '<div class="stat-tile"><div class="l">Физически всего</div><div class="v">'+p.physical+' шт</div></div>'+
-        '</div>'+
-        '<div class="table-wrap" id="pcWhTable">'+skeletonHtml(2)+'</div>'+
-      '</div>';
-    document.getElementById('backToKatalog').addEventListener('click', function(){ renderKatalog(); renderPanelInfoTitle(); });
+    var letter = (p.name || '?').trim().charAt(0).toUpperCase();
+    var qty = Number(p.physical)||0;
+    var ph = '<div class="pcard-ph">'+esc(letter)+'</div>';
+    document.getElementById('pcard').innerHTML =
+      '<div class="pcard-grip"></div>'+
+      (p.photo ? '<img class="pcard-photo" src="'+esc(p.photo)+'" alt="'+esc(p.name)+'">' : ph)+
+      '<h2>'+esc(p.name)+'</h2>'+
+      '<div class="pcard-meta">'+skuTag(esc(p.sku), esc(letter))+(p.category ? '<span>'+esc(p.category)+'</span>' : '')+
+        (p.active?'<span class="pill open">Активен</span>':'<span class="pill closed">Неактивен</span>')+
+        (p.supplier ? '<span>Поставщик: '+esc(p.supplier)+'</span>' : '')+'</div>'+
+      '<div class="pcard-grid">'+
+        '<div class="pcard-stat"><div class="l">Цена в шоуруме</div><div class="v">'+fmt(Number(p.price)||0)+' сум</div></div>'+
+        '<div class="pcard-stat"><div class="l">Цена на заказ</div><div class="v">'+fmt(hasOrderPrice(p) ? (Number(p.orderPrice)||0) : (Number(p.price)||0))+' сум</div></div>'+
+        '<div class="pcard-stat"><div class="l">Себестоимость</div><div class="v">'+fmt(Number(p.cost)||0)+' сум</div></div>'+
+        '<div class="pcard-stat"><div class="l">В наличии</div><div class="v">'+fmt(qty)+' шт.</div></div>'+
+      '</div>'+
+      '<div class="table-wrap pcard-wh" id="pcWhTable">'+skeletonHtml(2)+'</div>'+
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" type="button" id="pcardBack">← Назад к каталогу</button>'+
+      '<button class="ghost" type="button" id="pcardPrint" style="display:inline-flex;align-items:center;gap:6px">'+PRINT_ICON.replace('<svg ','<svg width="15" height="15" ')+'Печать ценника</button></div>';
+    var img = document.querySelector('#pcard .pcard-photo');
+    if(img) img.addEventListener('error', function(){ img.outerHTML = ph; });
+    document.getElementById('pcardBack').addEventListener('click', closeProductCard);
+    document.getElementById('pcardPrint').addEventListener('click', function(){ printPriceTag(p); });
+    pcardOverlay.setAttribute('data-open','true');
     API_CACHE.stock().then(function(rows){
       var mine = rows.filter(function(r){ return String(r.id)===String(p.id); });
       var wrap = document.getElementById('pcWhTable');
@@ -1297,12 +1337,27 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       if(wrap) wrap.innerHTML = emptyState('Не удалось загрузить остатки', e.message||'');
     });
   }
-  function renderPanelInfoTitle(){
-    var item = findNav(NAV_INFO, 'katalog');
-    document.getElementById('crumbOp').textContent = item.short;
-    document.getElementById('opTitle').textContent = item.title;
-    document.getElementById('opHint').textContent = item.hint;
+  function closeProductCard(){ pcardOverlay.setAttribute('data-open','false'); }
+  pcardOverlay.addEventListener('click', function(e){ if(e.target === pcardOverlay) closeProductCard(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeProductCard(); });
+  /* ---- Ценник из карточки товара: название, SKU, категория, цена «в шоуруме» крупно, «на заказ» — если отличается ---- */
+  function priceTagHtml(p){
+    var price = Number(p.price)||0;
+    var hasOrder = !(p.orderPrice === undefined || p.orderPrice === '' || p.orderPrice === null);
+    var orderPrice = hasOrder ? (Number(p.orderPrice)||0) : price;
+    return '<div class="pt">'+
+      '<div class="pt-brand">DASS HOME<span>'+esc(new Date().toLocaleDateString('ru-RU'))+'</span></div>'+
+      '<div class="pt-name">'+esc(p.name||p.sku)+'</div>'+
+      '<div class="pt-meta">Арт. '+esc(p.sku)+(p.category ? ' · '+esc(p.category) : '')+'</div>'+
+      '<div class="pt-price"><div class="pt-l">'+(orderPrice !== price ? 'Цена в шоуруме' : 'Цена')+'</div>'+fmt(price)+' <small>сум</small></div>'+
+      (orderPrice !== price ? '<div class="pt-alt">На заказ: <b>'+fmt(orderPrice)+' сум</b></div>' : '')+
+    '</div>';
   }
+  function printPriceTag(p){
+    document.getElementById('receiptPrintArea').innerHTML = priceTagHtml(p);
+    window.print();
+  }
+  window.addEventListener('afterprint', function(){ document.getElementById('receiptPrintArea').innerHTML = ''; });
 
   function renderOstatki(){
     var area = document.getElementById('infoArea');
@@ -2043,7 +2098,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     NAV_INFO.forEach(function(n){ idx.push({t:n.title, s:'Информация', ic:n.short.charAt(0), go:function(){ setMode('info'); selectInfoNav(n.id); } }); });
     (API_CACHE._catalogData || []).forEach(function(p){
       var letter=(p.name||'?').charAt(0).toUpperCase();
-      idx.push({t:p.name, s:p.sku+' · Каталог', ic:letter, go:function(){ setMode('info'); selectInfoNav('katalog'); setTimeout(function(){ renderProductCard(p); },170); } });
+      idx.push({t:p.name, s:p.sku+' · Каталог', ic:letter, go:function(){ setMode('info'); selectInfoNav('katalog'); renderProductCard(p); } });
     });
     RECENT_OPS.forEach(function(o){ idx.push({t:'№'+o.id, s:o.title, ic:'Д', go:function(){ setMode('info'); selectInfoNav('zakazy'); } }); });
     return idx;
