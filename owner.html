@@ -2165,7 +2165,16 @@
 
   SUMMARY_HOOK.run = refreshSummary;
   if(AUTH.token) refreshSummary();
-  setMode('ops');
+  /* Роль — всегда по ответу сервера: адрес страницы мог собрать старый (закэшированный или давно открытый) вход.
+     Без роли в адресе стартуем с Информации и скрытыми Операциями, пока сервер не подтвердит владельца. */
+  var ROLE_KNOWN = /[?&]role=/.test(location.search);
+  if(!ROLE_KNOWN) document.documentElement.classList.add('investor');
+  setMode(ROLE_KNOWN ? 'ops' : 'info');
+  apiGet('me').then(function(me){
+    var inv = !!me && me.role==='investor';
+    document.documentElement.classList.toggle('investor', inv);
+    if(inv !== IS_INVESTOR || !ROLE_KNOWN){ IS_INVESTOR = inv; setMode(inv ? 'info' : 'ops'); }
+  }).catch(function(){});
 })();
 </script>
 
