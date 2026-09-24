@@ -703,15 +703,42 @@
     return '<div class="field-set">'+
       '<div class="grid-2"><div class="field"><label>SKU <span class="req">*</span></label><input type="text" required id="tnSku" placeholder="DH-SF-205"></div>'+
       '<div class="field"><label>Название <span class="req">*</span></label><input type="text" required id="tnName" placeholder="Диван «Лофт» 3-местный, рогожка"></div></div>'+
-      '<div class="grid-3"><div class="field"><label>Категория <span class="req">*</span></label><input type="text" required id="tnCategory" placeholder="Диваны"></div>'+
+      '<div class="grid-3"><div class="field"><label>Категория <span class="req">*</span></label>'+categoryFieldHtml('tnCategory', '', true)+'</div>'+
       '<div class="field"><label>Ед. измерения</label><select id="tnUnit"><option selected>шт</option><option>комплект</option><option>м</option><option>м2</option><option>пог.м</option><option>рулон</option><option>упак</option></select></div>'+
       '<div class="field"><label>Поставщик <span class="req">*</span></label><select required id="tnSupplier"><option value="">Загрузка…</option></select></div></div>'+
-      '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnPrice" placeholder="4 200 000"><span class="suffix">сум</span></div></div>'+
+      '<div class="grid-3"><div class="field has-suffix"><label>Цена в шоуруме <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnPrice" placeholder="4 200 000"><span class="suffix">сум</span></div></div>'+
+      '<div class="field has-suffix"><label>Цена на заказ</label><div class="input-wrap"><input type="number" id="tnOrderPrice" placeholder="= цене в шоуруме"><span class="suffix">сум</span></div><span class="field-hint">Пусто — как в шоуруме</span></div>'+
       '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tnCost" placeholder="2 850 000"><span class="suffix">сум</span></div><span class="field-hint">Не видна менеджерам</span></div></div>'+
       '<div class="grid-2"><div class="field"><label>Фото товара</label>'+dropzoneHtml('tovarPhotoNew')+'<span class="field-hint">Или укажите ссылку на фото</span><input type="text" id="tnPhoto" placeholder="Ссылка на фото (необязательно)" style="margin-top:8px"></div>'+
       '<div class="field"><label>Активен</label><select id="tnActive"><option value="Да" selected>Да — виден менеджерам</option><option value="Нет">Нет — снят с продажи</option></select></div></div>'+
       '<div class="field"><label>Характеристики</label><textarea id="tnChars" placeholder="Дуб натуральный, 220×95×78 см, съёмные чехлы"></textarea></div></div>';
   };
+  /* Этап 4: категория — выпадающий список из категорий существующих товаров + «Новая категория…». */
+  function categoryFieldHtml(id, current, required){
+    return '<select id="'+id+'"'+(required?' required':'')+'>'+(current?'<option selected>'+esc(current)+'</option>':'<option value="">Загрузка…</option>')+'</select>'+
+      '<input type="text" id="'+id+'New" placeholder="Название новой категории" style="margin-top:8px" hidden>';
+  }
+  function fillCategorySelect(area, id, products, current){
+    var sel = area.querySelector('#'+id), inp = area.querySelector('#'+id+'New');
+    if(!sel) return;
+    var seen = {}, cats = [];
+    products.forEach(function(p){ var c = String(p.category||'').trim(); if(c && !seen[c.toLowerCase()]){ seen[c.toLowerCase()] = 1; cats.push(c); } });
+    if(current && !seen[String(current).toLowerCase()]) cats.push(String(current));
+    cats.sort(function(a,b){ return a.localeCompare(b,'ru'); });
+    sel.innerHTML = (current ? '' : '<option value="">Выберите категорию</option>')+
+      cats.map(function(c){ return '<option'+(c===current?' selected':'')+'>'+esc(c)+'</option>'; }).join('')+
+      '<option value="__new">+ Новая категория…</option>';
+    function sync(){
+      var isNew = sel.value === '__new';
+      if(inp){ inp.hidden = !isNew; if(isNew){ inp.setAttribute('required',''); inp.focus(); } else inp.removeAttribute('required'); }
+    }
+    sel.addEventListener('change', sync); sync();
+  }
+  function categoryVal(area, id){
+    var sel = area.querySelector('#'+id);
+    if(!sel) return '';
+    return sel.value === '__new' ? val(area, '#'+id+'New').trim() : sel.value;
+  }
   function fillSupplierSelect(sel, dir, selectedId){
     if(!sel) return;
     var suppliers = dir.filter(function(d){ return d.type==='Поставщик'; });
@@ -720,6 +747,8 @@
   }
   function initTovarNew(area){
     delete DZ_FILES['tovarPhotoNew'];
+    API_CACHE.catalog().then(function(products){ fillCategorySelect(area, 'tnCategory', products, ''); })
+      .catch(function(){ fillCategorySelect(area, 'tnCategory', [], ''); });
     API_CACHE.directory().then(function(dir){ fillSupplierSelect(area.querySelector('#tnSupplier'), dir); })
       .catch(function(e){ var sel=area.querySelector('#tnSupplier'); if(sel) sel.innerHTML='<option value="">Ошибка загрузки</option>'; setStatus('error','Не удалось загрузить справочник поставщиков: '+(e.message||e)); });
   }
@@ -733,10 +762,11 @@
   function teFieldsHtml(p, dir){
     return '<div class="grid-2"><div class="field"><label>SKU</label><input type="text" readonly value="'+p.sku+'"></div>'+
       '<div class="field"><label>Название <span class="req">*</span></label><input type="text" required id="teName" value="'+p.name+'"></div></div>'+
-      '<div class="grid-3"><div class="field"><label>Категория</label><input type="text" id="teCategory" value="'+p.category+'"></div>'+
+      '<div class="grid-3"><div class="field"><label>Категория</label>'+categoryFieldHtml('teCategory', p.category, false)+'</div>'+
       '<div class="field"><label>Ед. измерения</label><select id="teUnit">'+['шт','комплект','м','м2','пог.м','рулон','упак'].map(function(u){ return '<option'+(p.unit===u?' selected':'')+'>'+u+'</option>'; }).join('')+'</select></div>'+
       '<div class="field"><label>Поставщик</label><select id="teSupplier">'+dir.filter(function(d){return d.type==='Поставщик';}).map(function(s){ return '<option value="'+s.id+'"'+(String(s.id)===String(p.supplierId)?' selected':'')+'>'+s.name+'</option>'; }).join('')+'</select></div></div>'+
-      '<div class="grid-2"><div class="field has-suffix"><label>Цена продажи <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tePrice" value="'+p.price+'"><span class="suffix">сум</span></div></div>'+
+      '<div class="grid-3"><div class="field has-suffix"><label>Цена в шоуруме <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="tePrice" value="'+p.price+'"><span class="suffix">сум</span></div></div>'+
+      '<div class="field has-suffix"><label>Цена на заказ <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="teOrderPrice" value="'+(p.orderPrice!==undefined&&p.orderPrice!==null&&p.orderPrice!==''?p.orderPrice:p.price)+'"><span class="suffix">сум</span></div></div>'+
       '<div class="field has-suffix"><label>Себестоимость <span class="req">*</span></label><div class="input-wrap"><input type="number" required id="teCost" value="'+p.cost+'"><span class="suffix">сум</span></div></div></div>'+
       '<div class="field"><label>Активен</label><select id="teActive"><option value="Да"'+(p.active?' selected':'')+'>Да — виден менеджерам</option><option value="Нет"'+(!p.active?' selected':'')+'>Нет — снят с продажи</option></select></div>'+
       '<div class="field"><label>Фото товара</label>'+dropzoneHtml('tovarPhotoEdit', p.photo)+'<span class="field-hint">Или укажите ссылку на фото</span><input type="text" id="tePhoto" value="'+esc(p.photo||'')+'" placeholder="Ссылка на фото (необязательно)" style="margin-top:8px"></div>'+
@@ -753,6 +783,7 @@
         delete DZ_FILES['tovarPhotoEdit'];
         var p = products.filter(function(x){ return String(x.sku)===String(sel.value); })[0];
         if(slot) slot.innerHTML = p ? teFieldsHtml(p, dir) : '';
+        if(slot && p) fillCategorySelect(slot, 'teCategory', products, p.category);
         if(slot) initDropzones(slot);
       }
       sel.addEventListener('change', load);
@@ -1221,8 +1252,9 @@
       '<div class="product-card">'+
         '<div class="pc-head">'+photoHtml+'<div style="flex:1"><h3>'+p.name+'</h3><div class="pc-badges"><span class="type-badge">'+p.category+'</span>'+skuTag(p.sku,letter)+(p.active?'<span class="pill open">Активен</span>':'<span class="pill closed">Неактивен</span>')+'</div></div>'+
         '<div style="text-align:right"><div class="field-hint">Поставщик</div><div style="font:600 14px \'Public Sans\',sans-serif">'+p.supplier+'</div></div></div>'+
-        '<div class="stat-grid">'+
-          '<div class="stat-tile"><div class="l">Цена продажи</div><div class="v">'+fmt(p.price)+' сум</div></div>'+
+        '<div class="stat-grid" style="grid-template-columns:repeat(auto-fit,minmax(140px,1fr))">'+
+          '<div class="stat-tile"><div class="l">Цена в шоуруме</div><div class="v">'+fmt(p.price)+' сум</div></div>'+
+          '<div class="stat-tile"><div class="l">Цена на заказ</div><div class="v">'+fmt(p.orderPrice!==undefined&&p.orderPrice!==null&&p.orderPrice!==''?p.orderPrice:p.price)+' сум</div></div>'+
           '<div class="stat-tile"><div class="l">Себестоимость</div><div class="v">'+fmt(p.cost)+' сум</div></div>'+
           '<div class="stat-tile"><div class="l">Физически всего</div><div class="v">'+p.physical+' шт</div></div>'+
         '</div>'+
@@ -1565,15 +1597,16 @@
   function val(area, sel){ var el = area.querySelector(sel); return el ? el.value : ''; }
   function buildRealPayload(key, area){
     if(key==='tovar-new'){
-      return { payload: { sku: val(area,'#tnSku'), name: val(area,'#tnName'), category: val(area,'#tnCategory'),
+      return { payload: { sku: val(area,'#tnSku'), name: val(area,'#tnName'), category: categoryVal(area,'tnCategory'),
         unit: val(area,'#tnUnit'), supplier: val(area,'#tnSupplier'), price: Number(val(area,'#tnPrice'))||0,
+        order_price: val(area,'#tnOrderPrice') === '' ? '' : Number(val(area,'#tnOrderPrice'))||0,
         cost: Number(val(area,'#tnCost'))||0, photo: val(area,'#tnPhoto'), active: val(area,'#tnActive'), chars: val(area,'#tnChars') } };
     }
     if(key==='tovar-edit'){
       var psel = area.querySelector('#teProduct');
       if(!psel || !psel.value) return { error: 'Выберите товар.' };
-      return { payload: { product: psel.value, name: val(area,'#teName'), category: val(area,'#teCategory'),
-        unit: val(area,'#teUnit'), supplier: val(area,'#teSupplier'), price: val(area,'#tePrice'), cost: val(area,'#teCost'),
+      return { payload: { product: psel.value, name: val(area,'#teName'), category: categoryVal(area,'teCategory'),
+        unit: val(area,'#teUnit'), supplier: val(area,'#teSupplier'), price: val(area,'#tePrice'), order_price: val(area,'#teOrderPrice'), cost: val(area,'#teCost'),
         active: val(area,'#teActive'), chars: val(area,'#teChars'), photo: val(area,'#tePhoto') } };
     }
     if(key==='sklad-rashod'){

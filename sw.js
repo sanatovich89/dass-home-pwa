@@ -10,7 +10,7 @@
    owner.html даже при рабочей сети (баг, из-за которого не работал вход).
    Теперь запрос оболочки всегда идёт в сеть с явным обходом HTTP-кэша. */
 
-var CACHE_NAME = 'dass-home-shell-v3';
+var CACHE_NAME = 'dass-home-shell-v4';
 var SHELL_FILES = [
   './',
   './index.html',
