@@ -380,20 +380,27 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   .pcard-stat .v{font:700 17px/1.2 'Sora',sans-serif;color:var(--text)}
   .pcard-wh{margin-bottom:16px}
   #receiptPrintArea{display:none}
+  /* visibility:hidden на всём body (старая версия) не убирает элементы из потока — страница
+     печаталась той же высоты, что и весь экран приложения, и ценник мог уйти на 2-ю/3-ю
+     пустую страницу или не попасть в печать вовсе. display:none полностью убирает вёрстку
+     из документа, а сам ценник — фирменный стиль DASS HOME, ширина текучая через min(),
+     поэтому не нужно угадывать ширину бумаги принтера при печати. */
   @media print{
-    body *{visibility:hidden}
-    #receiptPrintArea,#receiptPrintArea *{visibility:visible}
-    #receiptPrintArea{display:block;position:fixed;top:0;left:0;width:100%;padding:24px;font:14px/1.5 'Public Sans',sans-serif;color:#111}
-    /* Ценник товара: на А4 — карточка 90×60 мм с рамкой для вырезания, на узкой ленте — во всю ширину */
-    .pt{width:90mm;min-height:60mm;box-sizing:border-box;border:.75pt dashed #000;padding:5mm 6mm;display:flex;flex-direction:column;gap:2mm;page-break-inside:avoid;break-inside:avoid}
-    .pt-brand{display:flex;justify-content:space-between;align-items:baseline;gap:4mm;font:700 9pt/1 'Sora',Arial,sans-serif;letter-spacing:.08em;border-bottom:.75pt solid #000;padding-bottom:1.5mm}
-    .pt-brand span{font:400 7pt/1 'Public Sans',Arial,sans-serif;letter-spacing:0}
-    .pt-name{font:700 13pt/1.2 'Sora',Arial,sans-serif;margin-top:1mm;overflow-wrap:anywhere}
-    .pt-meta{font-size:8pt;color:#333}
-    .pt-price{margin-top:auto;font:800 24pt/1.05 'Sora',Arial,sans-serif;white-space:nowrap}
-    .pt-price small{font-size:12pt;font-weight:700}
-    .pt-l{font-size:7.5pt;text-transform:uppercase;letter-spacing:.05em;color:#333}
-    .pt-alt{font-size:9pt;border-top:.5pt solid #999;padding-top:1.5mm}
+    @page{margin:10mm}
+    body > *:not(#receiptPrintArea){display:none!important}
+    html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+    #receiptPrintArea{display:block;color:#241E17;font:11pt/1.45 'Public Sans',Arial,sans-serif}
+    .pt{width:min(90mm,100%);min-height:60mm;box-sizing:border-box;border:1pt solid #B4924F;border-radius:2mm;padding:5mm 6mm;display:flex;flex-direction:column;gap:2mm;page-break-inside:avoid;break-inside:avoid}
+    .pt-brand{display:flex;align-items:center;gap:2mm;font:800 9pt/1 'Sora',Arial,sans-serif;letter-spacing:.04em;color:#B4924F;border-bottom:1pt solid #B4924F;padding-bottom:1.5mm}
+    .pt-mark{display:inline-flex;align-items:center;justify-content:center;width:6mm;height:6mm;border-radius:1.4mm;background:#B4924F;color:#fff;font:800 3mm/1 'Sora',Arial,sans-serif;flex:none}
+    .pt-brand b{flex:1}
+    .pt-brand span{font:400 7pt/1 'Public Sans',Arial,sans-serif;letter-spacing:0;color:#7C7062}
+    .pt-name{font:700 clamp(10pt,5vw,13pt)/1.2 'Sora',Arial,sans-serif;margin-top:1mm;overflow-wrap:anywhere;color:#241E17}
+    .pt-meta{font-size:8pt;color:#7C7062}
+    .pt-price{margin-top:auto;font:800 clamp(15pt,9vw,24pt)/1.05 'Sora',Arial,sans-serif;white-space:nowrap;color:#241E17}
+    .pt-price small{font-size:.5em;font-weight:700;color:#6B5B48}
+    .pt-l{font-size:7.5pt;text-transform:uppercase;letter-spacing:.06em;color:#B4924F;font-weight:700}
+    .pt-alt{font-size:9pt;border-top:.5pt solid #E3D8C0;padding-top:1.5mm;color:#6B5B48}
   }
 
   @media (max-width:480px){
@@ -1348,7 +1355,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     var hasOrder = !(p.orderPrice === undefined || p.orderPrice === '' || p.orderPrice === null);
     var orderPrice = hasOrder ? (Number(p.orderPrice)||0) : price;
     return '<div class="pt">'+
-      '<div class="pt-brand">DASS HOME<span>'+esc(new Date().toLocaleDateString('ru-RU'))+'</span></div>'+
+      '<div class="pt-brand"><span class="pt-mark">DH</span><b>DASS HOME</b><span>'+esc(new Date().toLocaleDateString('ru-RU'))+'</span></div>'+
       '<div class="pt-name">'+esc(p.name||p.sku)+'</div>'+
       '<div class="pt-meta">Арт. '+esc(p.sku)+(p.category ? ' · '+esc(p.category) : '')+'</div>'+
       '<div class="pt-price"><div class="pt-l">'+(orderPrice !== price ? 'Цена в шоуруме' : 'Цена')+'</div>'+fmt(price)+' <small>сум</small></div>'+
