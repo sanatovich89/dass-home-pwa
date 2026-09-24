@@ -46,13 +46,13 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   }
   /* Логотип на тёмном фоне — отдельная светлая версия картинки, переключается тем же
      условием, что и цвета выше (системная тёмная тема ИЛИ вручную выбранная). */
-  img[data-dark-logo]{display:none}
+  img[data-dark-logo]{display:none!important}
   @media (prefers-color-scheme: dark){
-    :root:not([data-theme="light"]) img[data-light-logo]{display:none}
-    :root:not([data-theme="light"]) img[data-dark-logo]{display:inline}
+    :root:not([data-theme="light"]) img[data-light-logo]{display:none!important}
+    :root:not([data-theme="light"]) img[data-dark-logo]{display:inline!important}
   }
-  :root[data-theme="dark"] img[data-light-logo]{display:none}
-  :root[data-theme="dark"] img[data-dark-logo]{display:inline}
+  :root[data-theme="dark"] img[data-light-logo]{display:none!important}
+  :root[data-theme="dark"] img[data-dark-logo]{display:inline!important}
   *{box-sizing:border-box}
   body{background:var(--bg);color:var(--text);font:400 14px/1.5 'Public Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   h1,h2,h3{font-family:'Sora',system-ui,sans-serif;margin:0}
