@@ -808,7 +808,7 @@
   TEMPLATES['zakaz-edit'] = function(){
     return '<div class="field-set">'+
       '<div class="field"><label>Заказ <span class="req">*</span></label><select id="editOrderSelect" required>'+skeletonHtml(1)+'</select>'+
-      '<span class="field-hint">Меняется только невыданное: количество, а в строках без выдачи — ещё товар и склад.</span></div>'+
+      '<span class="field-hint">Меняется только невыданное: количество, а в строках без выдачи — ещё товар, склад и цена «В шоуруме / На заказ». Цену берёт сервер из карточки товара.</span></div>'+
       '<div id="editLinesSlot" class="lines-list"></div>'+
       '<div class="field"><label>Плановая дата выдачи</label><input type="date" id="editPlannedInput"></div>'+
       '<div class="field"><label>Комментарий</label><textarea id="editCommentInput" placeholder="Что изменилось в заказе"></textarea></div></div>';
@@ -833,10 +833,37 @@
         '<div class="line-sub">Выдано: '+issued+' · Заказано: '+it.ordered+' · Склад: '+esc(it.warehouse||'—')+'</div></div></div>'+
         '<div class="grid-2"><div class="field"><label>Товар</label><select class="editSkuSelect" data-line-id="'+esc(it.lineId)+'" data-orig="'+esc(it.sku)+'"'+dis+'>'+skuOpts+'</select></div>'+
         '<div class="field"><label>Склад</label><select class="editWhSelect" data-line-id="'+esc(it.lineId)+'" data-orig="'+esc(it.warehouse||'')+'"'+dis+'>'+whOpts+'</select></div></div>'+
-        (locked ? '<p class="field-hint">Часть товара уже выдана — товар и склад в этой строке менять нельзя.</p>' : '')+
+        editPriceRow(it, locked)+
+        (locked ? '<p class="field-hint">Часть товара уже выдана — товар, склад и цену в этой строке менять нельзя.</p>' : '')+
         '<div class="line-grid"><div class="field"><label>Новое кол-во</label><input type="number" min="'+issued+'" value="'+it.ordered+'" data-line-id="'+esc(it.lineId)+'" data-issued="'+issued+'" data-ordered="'+it.ordered+'" data-locked="'+(locked?'1':'0')+'" class="editQtyInput"></div>'+
         '<div class="field"><label>Уже выдано</label><input type="text" readonly value="'+issued+'"></div></div></div>';
     }).join('');
+  }
+  /* Этап 5: «В шоуруме / На заказ» в строке заказа; цены — из карточки выбранного товара, произвольной цены нет. */
+  function editPriceRow(it, locked){
+    var pt = it.priceType==='order' ? 'order' : 'showroom', dis = locked ? ' disabled' : '';
+    return '<div class="chip-row price-type-row edit-ptype-row" role="group" aria-label="Цена строки" data-line-id="'+esc(it.lineId)+'" data-orig="'+pt+'" data-value="'+pt+'">'+
+      '<button type="button" class="chip" data-ptype="showroom" aria-pressed="'+(pt==='showroom')+'"'+dis+'>В шоуруме · <span class="pt-sum">'+fmt(it.showroomPrice!=null?it.showroomPrice:it.price)+'</span></button>'+
+      '<button type="button" class="chip" data-ptype="order" aria-pressed="'+(pt==='order')+'"'+dis+'>На заказ · <span class="pt-sum">'+fmt(it.orderPrice!=null?it.orderPrice:it.price)+'</span></button></div>';
+  }
+  function bindEditPriceRows(area, products){
+    area.querySelectorAll('.edit-ptype-row').forEach(function(row){
+      row.querySelectorAll('.chip').forEach(function(c){
+        c.addEventListener('click', function(){
+          if(c.disabled) return;
+          row.dataset.value = c.dataset.ptype;
+          row.querySelectorAll('.chip').forEach(function(x){ x.setAttribute('aria-pressed', x===c ? 'true' : 'false'); });
+        });
+      });
+      var skuSel = area.querySelector('.editSkuSelect[data-line-id="'+row.dataset.lineId+'"]');
+      if(skuSel) skuSel.addEventListener('change', function(){
+        var p = (products||[]).filter(function(x){ return x.sku===skuSel.value; })[0];
+        if(!p) return;
+        var sums = row.querySelectorAll('.pt-sum');
+        sums[0].textContent = fmt(p.price);
+        sums[1].textContent = fmt(p.orderPrice!=null ? p.orderPrice : p.price);
+      });
+    });
   }
   function initZakazEdit(area){
     var sel = area.querySelector('#editOrderSelect');
@@ -849,7 +876,7 @@
       function loadItems(){
         var slot = area.querySelector('#editLinesSlot');
         if(slot) slot.innerHTML = skeletonHtml(2);
-        apiGet('orderItems', { order_id: sel.value }).then(function(items){ renderEditLines(area, items, products); })
+        apiGet('orderItems', { order_id: sel.value }).then(function(items){ renderEditLines(area, items, products); bindEditPriceRows(area, products); })
           .catch(function(e){ if(slot) slot.innerHTML = emptyState('Не удалось загрузить позиции', e.message||''); });
       }
       sel.addEventListener('change', loadItems);
@@ -1494,6 +1521,11 @@
           if(skuSel && whSel){
             if(skuSel.value !== skuSel.dataset.orig || whSel.value !== whSel.dataset.orig) changed = true;
             line.sku = skuSel.value; line.warehouse = whSel.value;
+          }
+          var ptRow = area.querySelector('.edit-ptype-row[data-line-id="'+lid+'"]');
+          if(ptRow){
+            if(ptRow.dataset.value !== ptRow.dataset.orig) changed = true;
+            line.price_type = ptRow.dataset.value;
           }
         }
         if(changed) elines.push(line);
