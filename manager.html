@@ -1,5 +1,5 @@
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Менеджер DASS HOME</title>
 <meta name="description" content="Рабочее приложение менеджера шоурума DASS HOME: заказы, оплаты, выдача и возвраты.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -408,6 +408,10 @@
 
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
   @media (prefers-reduced-motion: reduce){*{transition:none!important;animation:none!important}}
+  /* iPhone: поля с шрифтом меньше 16px заставляют Safari приближать страницу при вводе (и она «ездит» вбок);
+     горизонтальная прокрутка страницы запрещена — широкие таблицы листаются внутри своих рамок. */
+  html,body{max-width:100%;overflow-x:hidden}
+  @supports (-webkit-touch-callout:none){ input,select,textarea{font-size:16px!important} }
 </style>
 
 <div class="drawer-overlay" id="drawerOverlay"></div>
