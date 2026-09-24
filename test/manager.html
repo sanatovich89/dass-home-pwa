@@ -909,7 +909,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   TEMPLATES['zakaz-cancel'] = function(){
     return '<div class="field-set">'+
       '<div class="field"><label>Заказ <span class="req">*</span></label><select id="cancelOrderSelect" required>'+skeletonHtml(1)+'</select></div>'+
-      '<div class="field"><label>Что отменить <span class="req">*</span></label><select id="cancelLineSelect" required>'+skeletonHtml(1)+'</select></div>'+
+      '<div class="field"><label>Что отменить <span class="req">*</span></label><select id="cancelLineSelect">'+skeletonHtml(1)+'</select></div>'+
       '<p class="field-hint warn">Выданная часть заказа так не отменяется — для неё используйте «Возврат».</p>'+
       '<div class="field"><label>Причина отмены <span class="req">*</span></label><select id="cancelReasonInput" required><option value="">Выбрать…</option><option>Клиент передумал</option><option>Долгий срок ожидания</option><option>Прочее</option></select></div></div>';
   };
