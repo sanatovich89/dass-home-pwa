@@ -558,6 +558,18 @@
         return res.data;
       });
   }
+  /* Прочие POST-действия владельца (справочник пользователей). */
+  function apiPost(action, body){
+    body = body || {}; body.action = action; body.token = AUTH.token;
+    return fetch(API_BASE, { method:'POST', body: JSON.stringify(body) })
+      .then(function(r){ return r.json(); }).then(function(res){
+        if(!res.ok) {
+          if (/вход в систему|Сессия истекла/i.test(res.error || '')) apiSessionExpired();
+          throw new Error((res.error)||'Ошибка API');
+        }
+        return res.data;
+      });
+  }
   var API_CACHE = {
     _catalog:null, _stock:null, _zakazy:null, _deficit:null, _po:null, _cash:null, _dir:null, _pending:null,
     catalog: function(){ var self=this; return this._catalog || (this._catalog = apiGet('catalog').then(function(d){ self._catalogData = d; return d; })); },
@@ -674,12 +686,13 @@
     box:'<path d="M10 3l6 3.2v7.6L10 17l-6-3.2V6.2L10 3z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M4 6.2L10 9.5l6-3.3M10 9.5V17" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/>',
     cart:'<circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="14.5" cy="16" r="1.2" fill="currentColor"/><path d="M3.5 4h2l1.8 9.2a1 1 0 001 .8h7.2a1 1 0 001-.78L18 7H6.2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>',
     wallet:'<circle cx="10" cy="10" r="7" stroke="currentColor" stroke-width="1.7"/><path d="M10 6.5v7M7.8 8.2c0-1 1-1.7 2.2-1.7s2.2.6 2.2 1.5c0 2.2-4.4 1-4.4 3.2 0 .9 1 1.5 2.2 1.5s2.2-.7 2.2-1.7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
+    key:'<circle cx="7" cy="10" r="3.2" stroke="currentColor" stroke-width="1.5"/><path d="M10.2 10H17M14.5 10v2.6M16.6 10v2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>',
     users:'<circle cx="7.2" cy="7" r="2.4" stroke="currentColor" stroke-width="1.5"/><circle cx="13.4" cy="7.6" r="1.9" stroke="currentColor" stroke-width="1.5"/><path d="M2.8 16c.7-2.7 2.4-4.1 4.4-4.1s3.7 1.4 4.4 4.1M11.6 12.2c1.7.1 3 1.3 3.6 3.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>',
     grid:'<rect x="3.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/><rect x="10.5" y="3.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/><rect x="3.5" y="10.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/><rect x="10.5" y="10.5" width="6" height="6" rx="1.2" stroke="currentColor" stroke-width="1.5"/>',
     list:'<path d="M4 5h12M4 10h12M4 15h8" stroke="currentColor" stroke-width="1.7" stroke-linecap="round"/>',
     alert:'<path d="M10 3.5l7.5 13H2.5l7.5-13z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M10 8.5v3.2M10 14.3v.1" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>'
   };
-  var NAV_ICON = {tovar:'tag', sklad:'box', zakup:'cart', kassa:'wallet', spravochnik:'users', katalog:'grid', ostatki:'box', zakazy:'list', zakupki:'cart', deficit:'alert', kassy:'wallet', 'spravochnik-info':'users'};
+  var NAV_ICON = {tovar:'tag', sklad:'box', zakup:'cart', kassa:'wallet', spravochnik:'users', katalog:'grid', ostatki:'box', zakazy:'list', zakupki:'cart', deficit:'alert', kassy:'wallet', 'spravochnik-info':'users', polzovateli:'key'};
   var NAV_BADGE = {ops:{}, info:{}};   /* заполняется из API в refreshSummary() */
 
   /* ============ OPERATIONS ============ */
@@ -1206,7 +1219,8 @@
     {id:'zakupki', title:'Закупки', short:'Закупки', hint:'Открытые, частичные и закрытые заказы поставщикам.'},
     {id:'deficit', title:'Дефицит', short:'Дефицит', hint:'Что нужно заказать поставщику прямо сейчас.'},
     {id:'kassy', title:'Кассы', short:'Кассы', hint:'Основная касса и кассы менеджеров, последние движения.'},
-    {id:'spravochnik-info', title:'Справочник', short:'Справочник', hint:'Склады, поставщики, сотрудники и инвесторы одним списком.'}
+    {id:'spravochnik-info', title:'Справочник', short:'Справочник', hint:'Склады, поставщики, сотрудники и инвесторы одним списком.'},
+    {id:'polzovateli', title:'Пользователи', short:'Доступ', hint:'Кто входит на сайт: логин, пароль, роль. Пароли хранятся только в зашифрованном виде.'}
   ];
 
   function renderKatalog(){
@@ -1398,7 +1412,76 @@
     }).catch(function(e){ area.innerHTML = emptyState('Не удалось загрузить справочник', e.message||''); });
   }
 
-  var INFO_RENDERERS = {katalog:renderKatalog, ostatki:renderOstatki, zakazy:renderZakazy, zakupki:renderZakupki, deficit:renderDeficit, kassy:renderKassy, 'spravochnik-info':renderSpravochnikInfo};
+  /* ============ ПОЛЬЗОВАТЕЛИ (вход на сайт) ============ */
+  var USER_ROLE_LABEL = {owner:'Владелец', manager:'Менеджер'};
+  function fmtDateTime(iso){
+    if(!iso) return '—';
+    var d = new Date(iso); if(isNaN(d)) return esc(iso);
+    return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
+  }
+  function renderPolzovateli(){
+    var area = document.getElementById('infoArea');
+    area.innerHTML = skeletonHtml(4);
+    apiGet('users').then(function(users){
+      function statusPill(u){
+        if(u.lockedUntil) return '<span class="pill danger">Заблокирован до '+fmtDateTime(u.lockedUntil).split(', ')[1]+'</span>';
+        return u.active ? '<span class="pill open">Активен</span>' : '<span class="pill closed">Отключён</span>';
+      }
+      var rows = users.map(function(u, i){
+        return '<tr><td><b>'+esc(u.login)+'</b>'+(u.self?' <span class="field-hint">(вы)</span>':'')+'</td><td>'+esc(u.name)+'</td><td>'+(USER_ROLE_LABEL[u.role]||esc(u.role)||'—')+'</td>'+
+          '<td>'+statusPill(u)+(u.hasPassword?'':' <span class="pill partial">Нет пароля</span>')+'</td><td>'+fmtDateTime(u.lastLogin)+'</td><td class="num">'+u.sessions+'</td>'+
+          '<td style="white-space:nowrap"><button class="ghost" type="button" data-edit="'+i+'">Изменить</button>'+(u.lockedUntil?' <button class="ghost" type="button" data-unlock="'+i+'">Разблокировать</button>':'')+'</td></tr>';
+      }).join('');
+      area.innerHTML = '<div style="margin-bottom:14px"><button class="primary" type="button" id="userNew">+ Новый пользователь</button></div>'+
+        '<div id="userForm"></div>'+
+        '<div class="table-wrap"><table class="lines"><thead><tr><th>Логин</th><th>Имя</th><th>Роль</th><th>Статус</th><th>Последний вход</th><th>Сессий</th><th></th></tr></thead><tbody>'+
+        (rows || '<tr><td colspan="7">Пользователей нет</td></tr>')+'</tbody></table></div>'+
+        '<p class="field-hint" style="margin-top:10px">После 5 неверных паролей подряд вход блокируется на 15 минут. Сессия действует 7 дней. '+
+        'Отключение, смена роли или пароля сразу завершает сессии пользователя. Логин после создания не меняется — по нему ведётся история заказов.</p>';
+      document.getElementById('userNew').addEventListener('click', function(){ userForm(null); });
+      area.querySelectorAll('[data-edit]').forEach(function(b){ b.addEventListener('click', function(){ userForm(users[+b.dataset.edit]); }); });
+      area.querySelectorAll('[data-unlock]').forEach(function(b){ b.addEventListener('click', function(){
+        var u = users[+b.dataset.unlock]; b.disabled = true;
+        apiPost('userUnlock', {login:u.login}).then(function(){ setStatus('success', 'Блокировка снята: '+esc(u.login)); renderPolzovateli(); })
+          .catch(function(e){ b.disabled = false; setStatus('error', esc(e.message||e)); });
+      }); });
+    }).catch(function(e){ area.innerHTML = emptyState('Не удалось загрузить пользователей', e.message||''); });
+  }
+  function userForm(u){
+    var isNew = !u, box = document.getElementById('userForm');
+    u = u || {login:'', name:'', role:'manager', active:true};
+    var lockSelf = !!u.self;
+    box.innerHTML = '<div class="product-card" style="margin-bottom:16px"><h3 style="margin:0 0 12px">'+(isNew?'Новый пользователь':'Пользователь '+esc(u.login))+'</h3>'+
+      '<div class="grid-2"><div class="field"><label>Логин <span class="req">*</span></label><input type="text" id="ufLogin" autocomplete="off" autocapitalize="none" value="'+esc(u.login)+'"'+(isNew?' placeholder="например, aziz"':' disabled')+'></div>'+
+      '<div class="field"><label>Имя <span class="req">*</span></label><input type="text" id="ufName" value="'+esc(u.name)+'" placeholder="Как показывать в заказах"></div></div>'+
+      '<div class="grid-2"><div class="field"><label>Роль</label><select id="ufRole"'+(lockSelf?' disabled':'')+'><option value="manager"'+(u.role==='manager'?' selected':'')+'>Менеджер</option><option value="owner"'+(u.role==='owner'?' selected':'')+'>Владелец</option></select></div>'+
+      '<div class="field"><label>Доступ</label><select id="ufActive"'+(lockSelf?' disabled':'')+'><option value="1"'+(u.active?' selected':'')+'>Активен — может входить</option><option value="0"'+(u.active?'':' selected')+'>Отключён</option></select></div></div>'+
+      '<div class="field"><label>'+(isNew?'Пароль <span class="req">*</span>':'Новый пароль')+'</label><input type="text" id="ufPassword" autocomplete="new-password" autocapitalize="none" placeholder="'+(isNew?'не короче 6 символов':'пусто — оставить прежний')+'">'+
+      '<div class="field-hint">Пароль виден, пока вы его вводите, — передайте его сотруднику. После сохранения узнать его нельзя, только задать новый.</div></div>'+
+      '<div style="display:flex;gap:8px;margin-top:12px"><button class="primary" type="button" id="ufSave">Сохранить</button><button class="ghost" type="button" id="ufCancel">Отмена</button></div></div>';
+    document.getElementById('ufCancel').addEventListener('click', function(){ box.innerHTML = ''; });
+    document.getElementById(isNew?'ufLogin':'ufName').focus();
+    document.getElementById('ufSave').addEventListener('click', function(){
+      var btn = this;
+      var body = {
+        create: isNew,
+        login: isNew ? document.getElementById('ufLogin').value.trim() : u.login,
+        name: document.getElementById('ufName').value.trim(),
+        role: document.getElementById('ufRole').value,
+        active: document.getElementById('ufActive').value === '1',
+        password: document.getElementById('ufPassword').value
+      };
+      btn.disabled = true; btn.textContent = 'Сохранение…';
+      apiPost('userSave', body).then(function(r){
+        var msg = isNew ? 'Пользователь создан: <b>'+esc(body.login)+'</b>' : 'Сохранено: <b>'+esc(body.login)+'</b>';
+        if(r && r.sessionsClosed) msg += ' · завершено сессий: '+r.sessionsClosed;
+        setStatus('success', msg);
+        renderPolzovateli();
+      }).catch(function(e){ btn.disabled = false; btn.textContent = 'Сохранить'; setStatus('error', esc(e.message||e)); });
+    });
+  }
+
+  var INFO_RENDERERS = {katalog:renderKatalog, ostatki:renderOstatki, zakazy:renderZakazy, zakupki:renderZakupki, deficit:renderDeficit, kassy:renderKassy, 'spravochnik-info':renderSpravochnikInfo, polzovateli:renderPolzovateli};
 
   /* ============ STATE + SHARED RENDER ============ */
   var state = { mode:'ops', opsNavId:'sklad', opsSubmode:'prihod', infoNavId:'katalog' };
