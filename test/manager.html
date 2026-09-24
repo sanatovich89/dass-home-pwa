@@ -355,6 +355,9 @@
   .pcard h2{font:700 18px/1.3 'Sora',sans-serif;margin:14px 0 8px;color:var(--text)}
   .pcard-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;font-size:12.5px;color:var(--text-muted)}
   .pcard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .pcard-stat:last-child:nth-child(odd){grid-column:1/-1}
+  .price-type-row{margin:0;gap:6px}
+  .price-type-row .chip{font-size:11.5px;padding:7px 10px}
   .pcard-stat{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-s);padding:12px}
   .pcard-stat .l{font-size:11px;color:var(--text-muted);margin-bottom:4px}
   .pcard-stat .v{font:700 17px/1.2 'Sora',sans-serif;color:var(--text)}
@@ -726,6 +729,9 @@
         var warn = l.qty > l.available ? '<span class="badge warn">Уйдёт в закупку — нет на складе</span>' : '';
         return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(l.sku, (l.name||'?').charAt(0).toUpperCase())+' '+l.name+'</div>'+
           '<div class="line-sub">Доступно: '+l.available+' шт</div></div><div class="line-price">'+fmt(l.price*l.qty)+'</div></div>'+
+          '<div class="chip-row price-type-row" role="group" aria-label="Цена строки">'+
+            '<button type="button" class="chip" data-ptype-idx="'+i+'" data-ptype="showroom" aria-pressed="'+(l.priceType!=='order')+'">В шоуруме · '+fmt(l.showroomPrice)+'</button>'+
+            '<button type="button" class="chip" data-ptype-idx="'+i+'" data-ptype="order" aria-pressed="'+(l.priceType==='order')+'">На заказ · '+fmt(l.orderPrice)+'</button></div>'+
           '<div class="line-grid"><div class="field"><label>Количество</label><input type="number" min="1" value="'+l.qty+'" data-line-idx="'+i+'" class="lineQtyEdit"></div>'+
           '<div class="field"><label>&nbsp;</label><button type="button" class="link-btn" data-remove-idx="'+i+'">Убрать</button></div></div>'+warn+'</div>';
       }).join('');
@@ -733,6 +739,15 @@
         inp.addEventListener('input', function(){
           var i = Number(inp.dataset.lineIdx), v = Math.max(1, Number(inp.value)||1);
           newOrderState.lines[i].qty = v;
+          renderOrderLines(area); renderOrderSummary(area);
+        });
+      });
+      /* Цена выбирается только вручную; сервер сам берёт цену выбранного типа из карточки товара. */
+      wrap.querySelectorAll('[data-ptype-idx]').forEach(function(btn){
+        btn.addEventListener('click', function(){
+          var l = newOrderState.lines[Number(btn.dataset.ptypeIdx)];
+          l.priceType = btn.dataset.ptype;
+          l.price = l.priceType === 'order' ? l.orderPrice : l.showroomPrice;
           renderOrderLines(area); renderOrderSummary(area);
         });
       });
@@ -778,7 +793,10 @@
         var qty = Math.max(1, Number(qtyInp.value)||1);
         var existing = newOrderState.lines.filter(function(l){ return l.productId===p.id; })[0];
         if(existing){ existing.qty += qty; }
-        else { newOrderState.lines.push({ productId:p.id, sku:p.sku, name:p.name, price:Number(p.price)||0, qty:qty, available:Number(p.physical)||0, warehouse:'WH-01' }); }
+        else {
+          var sp = Number(p.price)||0, op = (p.orderPrice === undefined || p.orderPrice === null || p.orderPrice === '') ? sp : (Number(p.orderPrice)||0);
+          newOrderState.lines.push({ productId:p.id, sku:p.sku, name:p.name, price:sp, showroomPrice:sp, orderPrice:op, priceType:'showroom', qty:qty, available:Number(p.physical)||0, warehouse:'WH-01' });
+        }
         qtyInp.value = '1';
         renderOrderLines(area); renderOrderSummary(area);
       });
@@ -1092,7 +1110,8 @@
       '<div class="pcard-meta">'+skuTag(esc(p.sku), esc(letter))+(p.category ? '<span>'+esc(p.category)+'</span>' : '')+
         (qty>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</div>'+
       '<div class="pcard-grid">'+
-        '<div class="pcard-stat"><div class="l">Цена</div><div class="v">'+fmt(Number(p.price)||0)+' сум</div></div>'+
+        '<div class="pcard-stat"><div class="l">Цена в шоуруме</div><div class="v">'+fmt(Number(p.price)||0)+' сум</div></div>'+
+        '<div class="pcard-stat"><div class="l">Цена на заказ</div><div class="v">'+fmt(p.orderPrice === undefined || p.orderPrice === '' || p.orderPrice === null ? (Number(p.price)||0) : (Number(p.orderPrice)||0))+' сум</div></div>'+
         '<div class="pcard-stat"><div class="l">В наличии</div><div class="v">'+fmt(qty)+' шт.</div></div>'+
       '</div>'+
       '<button class="ghost" type="button" id="pcardBack">← Назад к каталогу</button>';
@@ -1427,7 +1446,7 @@
       if(!newOrderState.lines.length) return { error: 'Добавьте хотя бы один товар в заказ.' };
       var clientIdField = area.querySelector('#clientIdField'), clientField = area.querySelector('#clientField');
       var payload = {
-        lines: newOrderState.lines.map(function(l){ return { sku:l.sku, qty:l.qty, warehouse:l.warehouse||'WH-01' }; }),
+        lines: newOrderState.lines.map(function(l){ return { sku:l.sku, qty:l.qty, warehouse:l.warehouse||'WH-01', price_type:l.priceType==='order'?'order':'showroom' }; }),
         planned: (area.querySelector('#plannedDateInput')||{}).value || '',
         comment: (area.querySelector('#commentInput')||{}).value || ''
       };
