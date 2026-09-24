@@ -47,7 +47,7 @@
   h1,h2,h3{font-family:'Sora',system-ui,sans-serif;margin:0}
   .app{max-width:720px;margin:0 auto;padding:0 0 56px;display:flex;flex-direction:column}
 
-  .topbar-lite{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 16px 0}
+  .topbar-lite{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:18px 16px 0;padding-top:calc(18px + env(safe-area-inset-top))}
   .hero-brand{display:flex;align-items:center;gap:11px;min-width:0}
   .icon-btn-lite{width:38px;height:38px;border-radius:50%;background:var(--surface);border:1px solid var(--border-soft);box-shadow:var(--shadow-1);flex:none;display:flex;align-items:center;justify-content:center;color:var(--text-muted);cursor:pointer}
   .icon-btn-lite svg{width:16px;height:16px}
@@ -172,6 +172,7 @@
   .summary-row.debt .v{color:var(--danger)}
 
   .panel-actions{display:flex;flex-direction:column;gap:8px;padding:16px 18px 22px;margin-top:8px;border-top:1px solid var(--border-soft)}
+  .panel-actions[hidden],.status[hidden]{display:none}
   button.primary{background:var(--accent);color:var(--accent-contrast);border:1px solid var(--accent);padding:12px 18px;border-radius:var(--radius-s);font:700 14px/1 'Public Sans',sans-serif;cursor:pointer;width:100%;display:inline-flex;align-items:center;justify-content:center}
   button.primary:hover{background:var(--accent-hover)}
   button.primary:disabled{cursor:default;opacity:.85}
@@ -341,11 +342,65 @@
   .row-ctx-menu{position:fixed;z-index:60;background:var(--surface);border:1px solid var(--border);border-radius:var(--radius-m);box-shadow:var(--shadow-2);padding:6px;display:flex;flex-direction:column;min-width:170px}
   .row-ctx-menu button{background:none;border:none;text-align:left;padding:9px 10px;border-radius:var(--radius-s);font:600 12px/1 'Public Sans',sans-serif;color:var(--text);cursor:pointer}
   .row-ctx-menu button:hover{background:var(--surface-2)}
+  /* ---- Карточка товара (Этап 2): лист снизу поверх каталога ---- */
+  table.lines tbody tr[data-pid]{cursor:pointer}
+  table.lines tbody tr[data-pid]:hover{background:var(--surface-2)}
+  .pcard-overlay{position:fixed;inset:0;background:rgba(20,15,10,.45);z-index:45;display:none;align-items:flex-end;justify-content:center}
+  .pcard-overlay[data-open="true"]{display:flex}
+  .pcard{background:var(--surface);width:100%;max-width:520px;max-height:90vh;overflow-y:auto;border-radius:var(--radius-l) var(--radius-l) 0 0;box-shadow:var(--shadow-2);padding:10px 18px calc(18px + env(safe-area-inset-bottom));animation:pcardUp .22s ease}
+  @keyframes pcardUp{from{transform:translateY(100%)}to{transform:none}}
+  .pcard-grip{width:40px;height:4px;border-radius:2px;background:var(--border);margin:0 auto 12px}
+  .pcard-photo{width:100%;aspect-ratio:4/3;object-fit:cover;border-radius:var(--radius-m);background:var(--surface-2);display:block;border:1px solid var(--border-soft)}
+  .pcard-ph{width:100%;aspect-ratio:4/3;border-radius:var(--radius-m);background:var(--surface-2);border:1px solid var(--border-soft);display:flex;align-items:center;justify-content:center;color:var(--text-faint);font:700 48px/1 'Sora',sans-serif}
+  .pcard h2{font:700 18px/1.3 'Sora',sans-serif;margin:14px 0 8px;color:var(--text)}
+  .pcard-meta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px;font-size:12.5px;color:var(--text-muted)}
+  .pcard-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+  .pcard-stat{background:var(--surface-2);border:1px solid var(--border-soft);border-radius:var(--radius-s);padding:12px}
+  .pcard-stat .l{font-size:11px;color:var(--text-muted);margin-bottom:4px}
+  .pcard-stat .v{font:700 17px/1.2 'Sora',sans-serif;color:var(--text)}
+
+  /* ---- Печать бланка заказа (Этап 3): один бланк, подстраивается под А4 и чековую ленту ---- */
+  .print-btn{width:32px;height:32px;border-radius:50%;border:1px solid var(--border-soft);background:var(--surface);color:var(--text-muted);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+  .print-btn svg{width:15px;height:15px}
+  .print-btn[data-loading="true"]{opacity:.5;pointer-events:none}
+  .print-inline{display:inline-flex;align-items:center;gap:6px;margin-top:8px;padding:8px 12px;border-radius:var(--radius-s);border:1px solid currentColor;background:transparent;color:inherit;font:700 12.5px/1 'Public Sans',sans-serif;cursor:pointer}
+  .print-inline[data-loading="true"]{opacity:.5;pointer-events:none}
   #receiptPrintArea{display:none}
   @media print{
-    body *{visibility:hidden}
-    #receiptPrintArea,#receiptPrintArea *{visibility:visible}
-    #receiptPrintArea{display:block;position:fixed;top:0;left:0;width:100%;padding:24px;font:14px/1.5 'Public Sans',sans-serif;color:#111}
+    @page{margin:10mm}
+    body > *:not(#receiptPrintArea){display:none!important}
+    html,body{background:#fff!important;height:auto!important;overflow:visible!important}
+    #receiptPrintArea{display:block;color:#000;font:11pt/1.4 'Public Sans',Arial,sans-serif}
+    .pb-head{display:flex;justify-content:space-between;align-items:flex-end;gap:10px;border-bottom:1.5pt solid #000;padding-bottom:6pt;margin-bottom:10pt}
+    .pb-brand{font:700 16pt/1.1 'Sora',Arial,sans-serif;letter-spacing:.02em}
+    .pb-sub{font-size:9pt}
+    .pb-title{font:700 14pt/1.2 'Sora',Arial,sans-serif;margin:0 0 2pt}
+    .pb-info{margin:8pt 0 10pt}
+    .pb-info div{margin:1pt 0}
+    .pb-t{width:100%;border-collapse:collapse;font-size:10pt}
+    .pb-t th,.pb-t td{border-bottom:.5pt solid #999;padding:4pt 3pt;text-align:left;vertical-align:top}
+    .pb-t th{border-bottom:1pt solid #000;font-weight:700}
+    .pb-t .r{text-align:right;white-space:nowrap}
+    .pb-t .sku{font-size:8.5pt;color:#444}
+    .pb-tot{margin:10pt 0 0 auto;width:60%;min-width:180pt}
+    .pb-tot div{display:flex;justify-content:space-between;gap:10pt;padding:2pt 0}
+    .pb-tot .big{font-weight:700;font-size:12pt;border-top:1pt solid #000;padding-top:4pt}
+    .pb-sign{display:flex;gap:24pt;margin-top:28pt;font-size:10pt}
+    .pb-sign div{flex:1;border-top:.5pt solid #000;padding-top:3pt}
+    .pb-foot{margin-top:14pt;font-size:8.5pt;color:#444;text-align:center}
+  }
+  /* Узкая бумага (чековый принтер 58/80 мм): компактнее, без колонки №, подписи столбиком */
+  @media print and (max-width:100mm){
+    @page{margin:2mm}
+    #receiptPrintArea{font-size:8.5pt}
+    .pb-head{display:block;text-align:center}
+    .pb-brand{font-size:12pt}
+    .pb-title{font-size:10.5pt;text-align:center}
+    .pb-t{font-size:8pt}
+    .pb-t .c-n{display:none}
+    .pb-tot{width:100%;min-width:0}
+    .pb-tot .big{font-size:9.5pt}
+    .pb-sign{flex-direction:column;gap:18pt;margin-top:18pt}
   }
 
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -406,6 +461,7 @@
   </div>
 </div>
 <div id="receiptPrintArea"></div>
+<div class="pcard-overlay" id="pcardOverlay" data-open="false"><div class="pcard" id="pcard" role="dialog" aria-modal="true" aria-label="Карточка товара"></div></div>
 <div class="app">
   <div class="topbar-lite">
     <div class="hero-brand">
@@ -422,7 +478,6 @@
           <div class="notif-item"><div><div class="t">Загрузка…</div></div></div>
         </div>
       </div>
-      <button class="icon-btn-lite" type="button" aria-label="Профиль"><svg viewBox="0 0 20 20" fill="none"><circle cx="10" cy="7.4" r="3" stroke="currentColor" stroke-width="1.6"/><path d="M4.3 16c.9-3 3.1-4.6 5.7-4.6s4.8 1.6 5.7 4.6" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     </div>
   </div>
 
@@ -1004,11 +1059,16 @@
       var wrap = document.getElementById('katalogResults');
       if(!wrap) return;
       if(!filtered.length){ wrap.innerHTML = emptyState('Ничего не найдено', 'Попробуйте изменить запрос или очистить поиск'); return; }
-      var body = filtered.map(function(r){ return '<tr><td>'+skuTag(r[0],r[1])+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td class="num">'+fmt(r[4])+'</td><td class="num">'+r[5]+'</td><td>'+(r[5]>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</td></tr>'; }).join('');
+      var body = filtered.map(function(r){ return '<tr data-pid="'+esc(r[6])+'"><td>'+skuTag(r[0],r[1])+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td class="num">'+fmt(r[4])+'</td><td class="num">'+r[5]+'</td><td>'+(r[5]>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</td></tr>'; }).join('');
       wrap.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>SKU</th><th>Название</th><th>Категория</th><th>Цена</th><th>Доступно</th><th>Статус</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+      wrap.querySelectorAll('tr[data-pid]').forEach(function(tr){
+        tr.addEventListener('click', function(){ if(byId[tr.dataset.pid]) openProductCard(byId[tr.dataset.pid]); });
+      });
       attachRowContext(wrap);
     }
+    var byId = {};
     API_CACHE.products().then(function(products){
+      products.forEach(function(p){ byId[p.id] = p; });
       rows = productsToRows(products);
       var search = document.getElementById('katalogSearch');
       draw(search ? search.value : '');
@@ -1018,6 +1078,87 @@
     });
     document.getElementById('katalogSearch').addEventListener('input', function(e){ draw(e.target.value); });
   }
+
+  /* ---- Карточка товара: фото, название, категория, SKU, цена, точное наличие (без себестоимости и складов) ---- */
+  var pcardOverlay = document.getElementById('pcardOverlay');
+  function openProductCard(p){
+    var letter = (p.category || p.name || '?').trim().charAt(0).toUpperCase();
+    var qty = Number(p.physical)||0;
+    var ph = '<div class="pcard-ph">'+esc(letter)+'</div>';
+    document.getElementById('pcard').innerHTML =
+      '<div class="pcard-grip"></div>'+
+      (p.photo ? '<img class="pcard-photo" src="'+esc(p.photo)+'" alt="'+esc(p.name)+'">' : ph)+
+      '<h2>'+esc(p.name)+'</h2>'+
+      '<div class="pcard-meta">'+skuTag(esc(p.sku), esc(letter))+(p.category ? '<span>'+esc(p.category)+'</span>' : '')+
+        (qty>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</div>'+
+      '<div class="pcard-grid">'+
+        '<div class="pcard-stat"><div class="l">Цена</div><div class="v">'+fmt(Number(p.price)||0)+' сум</div></div>'+
+        '<div class="pcard-stat"><div class="l">В наличии</div><div class="v">'+fmt(qty)+' шт.</div></div>'+
+      '</div>'+
+      '<button class="ghost" type="button" id="pcardBack">← Назад к каталогу</button>';
+    var img = document.querySelector('#pcard .pcard-photo');
+    if(img) img.addEventListener('error', function(){ img.outerHTML = ph; });
+    document.getElementById('pcardBack').addEventListener('click', closeProductCard);
+    pcardOverlay.setAttribute('data-open','true');
+  }
+  function closeProductCard(){ pcardOverlay.setAttribute('data-open','false'); }
+  pcardOverlay.addEventListener('click', function(e){ if(e.target === pcardOverlay) closeProductCard(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeProductCard(); });
+
+  /* ---- Печать бланка заказа через системный диалог браузера (формат А4/чек — там же) ---- */
+  var PRINT_ICON = '<svg viewBox="0 0 20 20" fill="none"><path d="M6 7V3.5h8V7M6 14H4.5a1 1 0 01-1-1V8a1 1 0 011-1h11a1 1 0 011 1v5a1 1 0 01-1 1H14" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 11.5h8v5H6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
+  function fmtDateTime(v){
+    var d = new Date(v);
+    return isNaN(d) ? String(v||'') : d.toLocaleDateString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric'})+' '+d.toLocaleTimeString('ru-RU',{hour:'2-digit',minute:'2-digit'});
+  }
+  function orderBlankHtml(orderId, o, client, items){
+    var sum = 0;
+    var rowsHtml = items.map(function(it, i){
+      var price = Number(it.price)||0, disc = Number(it.discount)||0, qty = Number(it.ordered)||0;
+      var line = it.lineTotal !== undefined && it.lineTotal !== '' ? Number(it.lineTotal)||0 : qty*(price-disc);
+      sum += line;
+      return '<tr><td class="c-n">'+(i+1)+'</td><td>'+esc(it.name||it.sku)+'<div class="sku">'+esc(it.sku)+'</div></td>'+
+        '<td class="r">'+fmt(qty)+'</td><td class="r">'+fmt(price-disc)+(disc>0?'<div class="sku">скидка '+fmt(disc)+'</div>':'')+'</td><td class="r">'+fmt(line)+'</td></tr>';
+    }).join('');
+    var total = o && o.total ? Number(o.total) : sum;
+    var paid = o ? Number(o.paid)||0 : 0;
+    var debt = o ? Number(o.debt)||0 : total - paid;
+    var mgr = (o && o.manager) || AUTH.name || AUTH.login || '';
+    return '<div class="pb-head"><div><div class="pb-brand">DASS HOME</div><div class="pb-sub">Мебельный шоурум</div></div><div class="pb-sub">Напечатано '+fmtDateTime(new Date())+'</div></div>'+
+      '<h1 class="pb-title">Заказ № '+esc(orderId)+'</h1>'+
+      '<div class="pb-info">'+
+        (o && o.created ? '<div>Дата заказа: '+esc(fmtDateTime(o.created))+'</div>' : '')+
+        '<div>Клиент: <b>'+esc(client ? client.name : (o ? o.clientId : '—'))+'</b>'+(client && client.phone ? ', '+esc(client.phone) : '')+'</div>'+
+        (mgr ? '<div>Менеджер: '+esc(mgr)+'</div>' : '')+
+        (o && o.planned ? '<div>Плановая выдача: '+esc(fmtDateTime(o.planned).split(' ')[0])+'</div>' : '')+
+      '</div>'+
+      '<table class="pb-t"><thead><tr><th class="c-n">№</th><th>Товар</th><th class="r">Кол-во</th><th class="r">Цена</th><th class="r">Сумма</th></tr></thead><tbody>'+rowsHtml+'</tbody></table>'+
+      '<div class="pb-tot"><div class="big"><span>Итого</span><span>'+fmt(total)+' сум</span></div>'+
+        '<div><span>Оплачено</span><span>'+fmt(paid)+' сум</span></div>'+
+        '<div><span>Остаток к оплате</span><span>'+fmt(debt)+' сум</span></div></div>'+
+      '<div class="pb-sign"><div>Менеджер</div><div>Клиент</div></div>'+
+      '<div class="pb-foot">Спасибо за покупку!</div>';
+  }
+  function printOrder(orderId, btn){
+    if(btn) btn.dataset.loading = 'true';
+    Promise.all([API_CACHE.orders(), API_CACHE.clients(), apiGet('orderItems', { order_id: orderId })]).then(function(res){
+      var o = res[0].filter(function(x){ return String(x.id) === String(orderId); })[0] || null;
+      var client = o ? res[1].filter(function(c){ return c.id === o.clientId; })[0] : null;
+      document.getElementById('receiptPrintArea').innerHTML = orderBlankHtml(orderId, o, client, res[2] || []);
+      if(btn) btn.dataset.loading = 'false';
+      window.print();
+    }).catch(function(e){
+      if(btn) btn.dataset.loading = 'false';
+      alert('Не удалось подготовить бланк: ' + (e && e.message || e));
+    });
+  }
+  window.addEventListener('afterprint', function(){ document.getElementById('receiptPrintArea').innerHTML = ''; });
+  document.addEventListener('click', function(e){
+    var b = e.target.closest && e.target.closest('[data-print-order]');
+    if(!b) return;
+    e.preventDefault(); e.stopPropagation();
+    printOrder(b.dataset.printOrder, b);
+  });
 
   /* Единый статус-пилюля из статусов оплаты/товара, которые возвращает API (строки на русском). */
   function orderPillState(o){
@@ -1047,9 +1188,9 @@
         var body = list.map(function(o){
           var pill = orderPillState(o);
           var mgr = isMyOrder(o) ? '<strong>Вы</strong>' : esc(o.manager || '—');
-          return '<tr><td>'+esc(o.id)+'</td><td>'+esc(byId[o.clientId]||o.clientId)+'</td><td>'+mgr+'</td><td class="num">'+fmt(o.total)+'</td><td class="num">'+fmt(o.paid)+'</td><td class="num">'+fmt(o.debt)+'</td><td><span class="pill '+pill[0]+'">'+pill[1]+'</span></td></tr>';
+          return '<tr><td>'+esc(o.id)+'</td><td>'+esc(byId[o.clientId]||o.clientId)+'</td><td>'+mgr+'</td><td class="num">'+fmt(o.total)+'</td><td class="num">'+fmt(o.paid)+'</td><td class="num">'+fmt(o.debt)+'</td><td><span class="pill '+pill[0]+'">'+pill[1]+'</span></td><td><button type="button" class="print-btn" data-print-order="'+esc(o.id)+'" aria-label="Печать бланка заказа '+esc(o.id)+'" title="Печать бланка">'+PRINT_ICON+'</button></td></tr>';
         }).join('');
-        table = '<div class="table-wrap"><table class="lines"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Сумма</th><th>Оплачено</th><th>Долг</th><th>Статус</th></tr></thead><tbody>'+body+'</tbody></table></div>';
+        table = '<div class="table-wrap"><table class="lines"><thead><tr><th>№</th><th>Клиент</th><th>Менеджер</th><th>Сумма</th><th>Оплачено</th><th>Долг</th><th>Статус</th><th></th></tr></thead><tbody>'+body+'</tbody></table></div>';
       }
       area.innerHTML = seg + table;
       area.querySelectorAll('#ordersScopeRow [data-scope]').forEach(function(b){
@@ -1444,7 +1585,8 @@
         var opLabel = opTitleEl ? opTitleEl.textContent : 'Операция';
         var docId = data.resultId || data.requestId || '';
         var srvTxt = serverText(data) || (data.duplicate ? 'Эта операция уже была проведена ранее — повторно не записана.' : '');
-        setStatus('success', '<div><strong>Отправлено.</strong> '+esc(srvTxt || ('№'+docId+' зарегистрирован.'))+'</div>');
+        var printBtn = (key==='zakaz-new' && data.resultId) ? '<br><button type="button" class="print-inline" data-print-order="'+esc(data.resultId)+'">'+PRINT_ICON.replace('<svg ','<svg width="15" height="15" ')+'Печать бланка</button>' : '';
+        setStatus('success', '<div><strong>Отправлено.</strong> '+esc(srvTxt || ('№'+docId+' зарегистрирован.'))+printBtn+'</div>');
         pushRecentOp(docId, opLabel);
         clearDraft(key);
         area.querySelectorAll('input[type=text]:not([readonly]), input[type=number]:not([readonly]), textarea').forEach(function(el){ el.value=''; });
@@ -1648,7 +1790,7 @@
     NAV_OPS.forEach(function(n){ idx.push({t:n.title, s:'Раздел операций', ic:n.short.charAt(0), go:function(){ setMode('ops'); selectOpsNav(n.id); } }); });
     NAV_INFO.forEach(function(n){ idx.push({t:n.title, s:'Информация', ic:n.short.charAt(0), go:function(){ setMode('info'); selectInfoNav(n.id); } }); });
     if(API_CACHE._p){ API_CACHE._p.then(function(products){
-      products.forEach(function(p){ idx.push({t:p.name, s:p.sku+' · Каталог', ic:(p.name||'?').charAt(0).toUpperCase(), go:function(){ setMode('info'); selectInfoNav('katalog'); } }); });
+      products.forEach(function(p){ idx.push({t:p.name, s:p.sku+' · Каталог', ic:(p.name||'?').charAt(0).toUpperCase(), go:function(){ setMode('info'); selectInfoNav('katalog'); openProductCard(p); } }); });
     }); }
     RECENT_OPS.forEach(function(o){ idx.push({t:'№'+o.id, s:o.title, ic:'Д', go:function(){ setMode('info'); selectInfoNav('moi-zakazy'); } }); });
     return idx;
