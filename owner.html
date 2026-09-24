@@ -1,4 +1,6 @@
 <meta charset="UTF-8">
+<script>/* Страница открывается только внутри входа (index.html); при прямом открытии — на вход. */
+try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
 <title>Операции DASS HOME</title>
 <meta name="description" content="Управление бизнесом DASS HOME: товары, склад, касса, остатки и закупки.">
