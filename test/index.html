@@ -32,6 +32,15 @@
     --hero-bg:#0E0B08;--hero-text:#F3ECDF;
     --danger-soft:#3A211B;
   }
+  /* Логотип на тёмном фоне — отдельная светлая версия картинки, переключается тем же
+     условием, что и цвета выше (системная тёмная тема ИЛИ вручную выбранная). */
+  img[data-dark-logo]{display:none}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) img[data-light-logo]{display:none}
+    :root:not([data-theme="light"]) img[data-dark-logo]{display:inline}
+  }
+  :root[data-theme="dark"] img[data-light-logo]{display:none}
+  :root[data-theme="dark"] img[data-dark-logo]{display:inline}
   *{box-sizing:border-box}
   html,body{height:100%}
   body{margin:0;background:var(--bg);color:var(--text);font-family:'Public Sans',-apple-system,BlinkMacSystemFont,sans-serif;
@@ -84,7 +93,12 @@
 
   <div class="login-view" id="loginView">
     <form class="login-card" id="loginForm" autocomplete="off">
-      <div class="login-logo"><img class="login-mark" src="icons/brand-mark.png" alt=""><img class="login-wordmark" src="icons/brand-wordmark.png" alt="DASS HOME"></div>
+      <div class="login-logo">
+        <img class="login-mark" src="icons/brand-mark.png" alt="" data-light-logo>
+        <img class="login-mark" src="icons/brand-mark-dark.png" alt="" data-dark-logo>
+        <img class="login-wordmark" src="icons/brand-wordmark.png" alt="DASS HOME" data-light-logo>
+        <img class="login-wordmark" src="icons/brand-wordmark-dark.png" alt="DASS HOME" data-dark-logo>
+      </div>
       <h1 class="login-title">Вход в систему</h1>
       <p class="login-sub">Учёт и продажи шоурума</p>
       <div class="login-error" id="loginError"></div>

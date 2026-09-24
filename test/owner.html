@@ -44,6 +44,15 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     --hero-bg:#1A1510;--hero-bg-2:#100C09;--hero-text:#F7F0E2;--hero-text-muted:#C4B49A;--hero-icon-bg:rgba(255,255,255,.06);
     --shadow-1:0 1px 2px rgba(0,0,0,.45);--shadow-2:0 22px 44px -22px rgba(0,0,0,.7);
   }
+  /* Логотип на тёмном фоне — отдельная светлая версия картинки, переключается тем же
+     условием, что и цвета выше (системная тёмная тема ИЛИ вручную выбранная). */
+  img[data-dark-logo]{display:none}
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]) img[data-light-logo]{display:none}
+    :root:not([data-theme="light"]) img[data-dark-logo]{display:inline}
+  }
+  :root[data-theme="dark"] img[data-light-logo]{display:none}
+  :root[data-theme="dark"] img[data-dark-logo]{display:inline}
   *{box-sizing:border-box}
   body{background:var(--bg);color:var(--text);font:400 14px/1.5 'Public Sans',system-ui,sans-serif;-webkit-font-smoothing:antialiased}
   h1,h2,h3{font-family:'Sora',system-ui,sans-serif;margin:0}
@@ -423,7 +432,14 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <nav class="drawer" id="drawer" aria-label="Главное меню">
   <div class="drawer-head">
-    <div class="drawer-brand"><img class="drawer-mark" src="icons/brand-mark.png" alt=""><div><h3><img class="drawer-wordmark" src="icons/brand-wordmark.png" alt="DASS HOME"></h3><p id="roleLabel">Владелец · OWNER</p></div></div>
+    <div class="drawer-brand">
+      <img class="drawer-mark" src="icons/brand-mark.png" alt="" data-light-logo>
+      <img class="drawer-mark" src="icons/brand-mark-dark.png" alt="" data-dark-logo>
+      <div><h3>
+        <img class="drawer-wordmark" src="icons/brand-wordmark.png" alt="DASS HOME" data-light-logo>
+        <img class="drawer-wordmark" src="icons/brand-wordmark-dark.png" alt="DASS HOME" data-dark-logo>
+      </h3><p id="roleLabel">Владелец · OWNER</p></div>
+    </div>
     <button class="drawer-close" id="drawerClose" type="button" aria-label="Закрыть меню"><svg viewBox="0 0 20 20" fill="none"><path d="M5 5l10 10M15 5L5 15" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg></button>
   </div>
   <div class="drawer-section">
@@ -481,7 +497,10 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       <div class="notif-wrap">
         <button class="icon-btn-lite" type="button" id="menuBtn" aria-label="Меню" aria-expanded="false"><svg viewBox="0 0 20 20" fill="none"><path d="M3 6h14M3 10h14M3 14h9" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg><span class="notif-dot" id="menuDot" hidden></span></button>
       </div>
-      <div class="hero-title"><h1><img src="icons/brand-wordmark.png" alt="DASS HOME"></h1><p>Файл OWNER · <span id="dateChip"></span></p></div>
+      <div class="hero-title"><h1>
+        <img src="icons/brand-wordmark.png" alt="DASS HOME" data-light-logo>
+        <img src="icons/brand-wordmark-dark.png" alt="DASS HOME" data-dark-logo>
+      </h1><p>Файл OWNER · <span id="dateChip"></span></p></div>
     </div>
     <div style="display:flex;gap:8px">
       <button class="icon-btn-lite" type="button" id="searchBtn" aria-label="Поиск"><svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>

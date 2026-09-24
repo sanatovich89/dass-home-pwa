@@ -10,7 +10,7 @@
    owner.html даже при рабочей сети (баг, из-за которого не работал вход).
    Теперь запрос оболочки всегда идёт в сеть с явным обходом HTTP-кэша. */
 
-var CACHE_NAME = 'dass-home-shell-test-v2';
+var CACHE_NAME = 'dass-home-shell-test-v3';
 var SHELL_FILES = [
   './',
   './index.html',
@@ -18,7 +18,9 @@ var SHELL_FILES = [
   './manager.html',
   './manifest.json',
   './icons/brand-mark.png',
-  './icons/brand-wordmark.png'
+  './icons/brand-wordmark.png',
+  './icons/brand-mark-dark.png',
+  './icons/brand-wordmark-dark.png'
 ];
 
 self.addEventListener('install', function (event) {
