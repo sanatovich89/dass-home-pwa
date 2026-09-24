@@ -326,6 +326,12 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   .search-result .t{font:600 12.5px/1.3 'Public Sans',sans-serif;color:var(--text)}
   .search-result .s{font-size:11px;color:var(--text-muted);margin-top:1px}
   .search-empty{padding:24px 16px;text-align:center;font-size:12.5px;color:var(--text-faint)}
+  /* ---- Кнопка выбора товара (открывает поиск-пикер вместо длинного select) ---- */
+  button.picker-btn{width:100%;font:500 14px/1.4 'Public Sans',sans-serif;color:var(--text);background:var(--surface-2);border:1px solid var(--border);border-radius:var(--radius-s);padding:10px 11px;text-align:left;cursor:pointer;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  button.picker-btn span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  button.picker-btn svg{width:14px;height:14px;color:var(--text-faint);flex:none}
+  button.picker-btn[data-empty="true"]{color:var(--text-faint)}
+  button.picker-btn:focus-visible{border-color:var(--accent);background:var(--surface)}
   .cat-tile.dragging{opacity:.4}
   .cat-tile.drag-over .ic-wrap{outline:2px dashed var(--accent);outline-offset:2px}
   .bc-spark{margin-top:10px;display:block}
@@ -484,6 +490,16 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
 </div>
 <div id="receiptPrintArea"></div>
 <div class="pcard-overlay" id="pcardOverlay" data-open="false"><div class="pcard" id="pcard" role="dialog" aria-modal="true" aria-label="Карточка товара"></div></div>
+<div class="search-overlay" id="productPickerOverlay" data-open="false">
+  <div class="search-box">
+    <div class="search-input-wrap">
+      <svg viewBox="0 0 20 20" fill="none"><circle cx="9" cy="9" r="6" stroke="currentColor" stroke-width="1.6"/><path d="M13.5 13.5L17 17" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <input type="text" class="search-input" id="productPickerInput" placeholder="Поиск по названию или SKU" aria-label="Поиск товара">
+      <button class="search-close" id="productPickerClose" type="button">Esc</button>
+    </div>
+    <div class="search-results" id="productPickerResults"></div>
+  </div>
+</div>
 <div class="app">
   <div class="topbar-lite">
     <div class="hero-brand">
@@ -726,7 +742,10 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
         '<input type="text" id="clientField" required placeholder="Имя и телефон клиента"><input type="hidden" id="clientIdField"></div>'+
       '<div class="lines-list">'+
         '<div id="orderLinesList"></div>'+
-        '<div class="grid-2"><div class="field"><label>Товар</label><select id="productSelect">'+skeletonHtml(1)+'</select></div>'+
+        '<div class="grid-2"><div class="field"><label>Товар</label>'+
+          '<button type="button" class="picker-btn" id="productPickerBtn" data-empty="true"><span id="productPickerBtnText">Загрузка…</span>'+
+          '<svg viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></button>'+
+          '<input type="hidden" id="productSelect"></div>'+
         '<div class="field"><label>Количество</label><input type="number" id="lineQtyInput" value="1" min="1"></div></div>'+
         '<button type="button" class="link-btn" id="addLineBtn">+ Добавить товар в заказ</button>'+
       '</div>'+
@@ -804,9 +823,16 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       newOrderState.products = products;
       var slot = area.querySelector('#payeeRowSlot');
       if(slot){ slot.outerHTML = payeeRowHtml(clients); initPayees(area); }
-      var sel = area.querySelector('#productSelect');
-      if(sel){
-        sel.innerHTML = products.map(function(p){ return '<option value="'+p.id+'">'+p.sku+' · '+p.name+' · '+fmt(p.price)+' сум (доступно '+p.physical+')</option>'; }).join('');
+      var sel = area.querySelector('#productSelect'), pickBtn = area.querySelector('#productPickerBtn'), pickBtnText = area.querySelector('#productPickerBtnText');
+      if(pickBtn && pickBtnText){
+        pickBtnText.textContent = 'Выбрать товар…';
+        pickBtn.addEventListener('click', function(){
+          openProductPicker(products, function(p){
+            sel.value = p.id;
+            pickBtn.removeAttribute('data-empty');
+            pickBtnText.textContent = p.sku+' · '+p.name+' · '+fmt(p.price)+' сум (доступно '+p.physical+')';
+          });
+        });
       }
       renderOrderLines(area); renderOrderSummary(area);
     }).catch(function(e){
@@ -819,7 +845,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       addBtn.addEventListener('click', function(){
         var sel = area.querySelector('#productSelect'), qtyInp = area.querySelector('#lineQtyInput');
         var p = newOrderState.products.filter(function(x){ return String(x.id)===String(sel.value); })[0];
-        if(!p) return;
+        if(!p){ setStatus('error', 'Сначала выберите товар.'); return; }
         var qty = Math.max(1, Number(qtyInp.value)||1);
         var existing = newOrderState.lines.filter(function(l){ return l.productId===p.id; })[0];
         if(existing){ existing.qty += qty; }
@@ -828,6 +854,9 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
           newOrderState.lines.push({ productId:p.id, sku:p.sku, name:p.name, price:sp, showroomPrice:sp, orderPrice:op, priceType:'showroom', qty:qty, available:Number(p.physical)||0, warehouse:'WH-01' });
         }
         qtyInp.value = '1';
+        sel.value = '';
+        var pickBtn = area.querySelector('#productPickerBtn'), pickBtnText = area.querySelector('#productPickerBtnText');
+        if(pickBtn && pickBtnText){ pickBtn.setAttribute('data-empty','true'); pickBtnText.textContent = 'Выбрать товар…'; }
         renderOrderLines(area); renderOrderSummary(area);
       });
     }
@@ -1184,6 +1213,49 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   function closeProductCard(){ pcardOverlay.setAttribute('data-open','false'); }
   pcardOverlay.addEventListener('click', function(e){ if(e.target === pcardOverlay) closeProductCard(); });
   document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeProductCard(); });
+
+  /* ---- Пикер товара для «Новый заказ»: поиск по названию/SKU вместо длинного select ----
+     Список товаров небольшой (сотни, не тысячи), поэтому фильтруем на клиенте без запросов к серверу. */
+  var productPickerOverlay = document.getElementById('productPickerOverlay');
+  var productPickerList = [], productPickerOnPick = null;
+  function openProductPicker(products, onPick){
+    productPickerList = products || [];
+    productPickerOnPick = onPick;
+    var input = document.getElementById('productPickerInput');
+    input.value = '';
+    drawProductPicker('');
+    productPickerOverlay.setAttribute('data-open','true');
+    setTimeout(function(){ input.focus(); }, 10);
+  }
+  function closeProductPicker(){ productPickerOverlay.setAttribute('data-open','false'); }
+  function drawProductPicker(q){
+    q = (q||'').trim().toLowerCase();
+    var wrap = document.getElementById('productPickerResults');
+    var filtered = productPickerList.filter(function(p){
+      return !q || (p.name||'').toLowerCase().indexOf(q)>-1 || (p.sku||'').toLowerCase().indexOf(q)>-1;
+    });
+    if(!filtered.length){ wrap.innerHTML = '<div class="search-empty">Ничего не найдено по запросу «'+esc(q)+'»</div>'; return; }
+    wrap.innerHTML = filtered.map(function(p){
+      var letter = (p.category || p.name || '?').trim().charAt(0).toUpperCase();
+      var qty = Number(p.physical)||0;
+      return '<button type="button" class="search-result" data-pid="'+esc(p.id)+'">'+
+        '<span class="ic">'+esc(letter)+'</span>'+
+        '<span style="flex:1;min-width:0;overflow:hidden"><span class="t">'+esc(p.name)+'</span>'+
+        '<span class="s">'+esc(p.sku)+' · '+fmt(Number(p.price)||0)+' сум · '+(qty>0?'доступно '+fmt(qty):'под заказ')+'</span></span>'+
+      '</button>';
+    }).join('');
+    wrap.querySelectorAll('[data-pid]').forEach(function(btn){
+      btn.addEventListener('click', function(){
+        var p = productPickerList.filter(function(x){ return String(x.id)===btn.dataset.pid; })[0];
+        closeProductPicker();
+        if(p && productPickerOnPick) productPickerOnPick(p);
+      });
+    });
+  }
+  document.getElementById('productPickerInput').addEventListener('input', function(e){ drawProductPicker(e.target.value); });
+  document.getElementById('productPickerClose').addEventListener('click', closeProductPicker);
+  productPickerOverlay.addEventListener('click', function(e){ if(e.target === productPickerOverlay) closeProductPicker(); });
+  document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeProductPicker(); });
 
   /* ---- Печать бланка заказа через системный диалог браузера (формат А4/чек — там же) ---- */
   var PRINT_ICON = '<svg viewBox="0 0 20 20" fill="none"><path d="M6 7V3.5h8V7M6 14H4.5a1 1 0 01-1-1V8a1 1 0 011-1h11a1 1 0 011 1v5a1 1 0 01-1 1H14" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/><path d="M6 11.5h8v5H6z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>';
