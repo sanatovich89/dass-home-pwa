@@ -1580,6 +1580,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       var reason = (area.querySelector('#cancelReasonInput')||{}).value;
       if(!reason) return { error: 'Укажите причину отмены.' };
       var lsel = area.querySelector('#cancelLineSelect');
+      if(lsel && !lsel.value && !/Все невыданные/.test((lsel.options[lsel.selectedIndex]||{}).text||'')) return { error: 'Дождитесь загрузки позиций заказа.' };
       var payload = { order_id: csel.value, reason: reason };
       if(lsel && lsel.value){ payload.line_id = lsel.value; }
       return { payload: payload };
