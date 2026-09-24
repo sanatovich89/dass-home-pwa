@@ -665,7 +665,9 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   };
 
   document.getElementById('dateChip').textContent = 'Менеджер · ' + new Date().toLocaleDateString('ru-RU',{day:'2-digit',month:'long'});
-  function skuTag(code,letter){ return '<span class="sku-tag"><span class="dot">'+letter+'</span>'+code+'</span>'; }
+  /* code/letter приходят из данных товара (SKU, первая буква названия) — экранируем здесь один раз,
+     чтобы не забыть это на каждом месте вызова. */
+  function skuTag(code,letter){ return '<span class="sku-tag"><span class="dot">'+esc(letter)+'</span>'+esc(code)+'</span>'; }
   function fmt(n){ return Number(n).toLocaleString('ru-RU'); }
   function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, function(c){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]; }); }
   function emptyState(title, sub, iconPath){
@@ -695,7 +697,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
   }
   function payeeRowHtml(clients){
     var chips = (clients||[]).slice(0,4).map(function(c){
-      return '<button type="button" class="payee" data-id="'+c.id+'" data-name="'+c.name+' · '+(c.phone||'')+'"><span class="payee-avatar">'+clientInit(c.name)+'</span><span class="pn">'+c.name.split(' ')[0]+'</span></button>';
+      return '<button type="button" class="payee" data-id="'+esc(c.id)+'" data-name="'+esc(c.name+' · '+(c.phone||''))+'"><span class="payee-avatar">'+esc(clientInit(c.name))+'</span><span class="pn">'+esc(c.name.split(' ')[0])+'</span></button>';
     }).join('');
     return '<div class="payee-row">'+chips+'<button type="button" class="payee is-new" data-new="1"><span class="payee-avatar">+</span><span class="pn">Новый</span></button></div>';
   }
@@ -769,7 +771,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     else {
       wrap.innerHTML = newOrderState.lines.map(function(l, i){
         var warn = l.qty > l.available ? '<span class="badge warn">Уйдёт в закупку — нет на складе</span>' : '';
-        return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(l.sku, (l.name||'?').charAt(0).toUpperCase())+' '+l.name+'</div>'+
+        return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(l.sku, (l.name||'?').charAt(0).toUpperCase())+' '+esc(l.name)+'</div>'+
           '<div class="line-sub">Доступно: '+l.available+' шт</div></div><div class="line-price">'+fmt(l.price*l.qty)+'</div></div>'+
           '<div class="chip-row price-type-row" role="group" aria-label="Цена строки">'+
             '<button type="button" class="chip" data-ptype-idx="'+i+'" data-ptype="showroom" aria-pressed="'+(l.priceType!=='order')+'">В шоуруме · '+fmt(l.showroomPrice)+'</button>'+
@@ -890,7 +892,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       var whList = EDIT_WAREHOUSES.slice();
       if(it.warehouse && !whList.some(function(w){ return w[0]===it.warehouse; })) whList.unshift([it.warehouse, it.warehouse]);
       var whOpts = whList.map(function(w){ return '<option value="'+esc(w[0])+'"'+(w[0]===it.warehouse?' selected':'')+'>'+esc(w[1])+'</option>'; }).join('');
-      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(esc(it.sku),(it.name||'?').charAt(0).toUpperCase())+' '+esc(it.name)+'</div>'+
+      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(it.sku,(it.name||'?').charAt(0).toUpperCase())+' '+esc(it.name)+'</div>'+
         '<div class="line-sub">Выдано: '+issued+' · Заказано: '+it.ordered+' · Склад: '+esc(it.warehouse||'—')+'</div></div></div>'+
         '<div class="grid-2"><div class="field"><label>Товар</label><select class="editSkuSelect" data-line-id="'+esc(it.lineId)+'" data-orig="'+esc(it.sku)+'"'+dis+'>'+skuOpts+'</select></div>'+
         '<div class="field"><label>Склад</label><select class="editWhSelect" data-line-id="'+esc(it.lineId)+'" data-orig="'+esc(it.warehouse||'')+'"'+dis+'>'+whOpts+'</select></div></div>'+
@@ -995,7 +997,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     var toIssue = items.filter(function(it){ return it.toIssue > 0; });
     if(!toIssue.length){ slot.innerHTML = '<p class="field-hint">По этому заказу выдавать нечего — всё уже выдано.</p>'; return; }
     slot.innerHTML = '<div class="lines-list">'+toIssue.map(function(it){
-      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(it.sku, (it.name||'?').charAt(0).toUpperCase())+' '+it.name+'</div><div class="line-sub">К выдаче: '+it.toIssue+' шт</div></div></div>'+
+      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(it.sku, (it.name||'?').charAt(0).toUpperCase())+' '+esc(it.name)+'</div><div class="line-sub">К выдаче: '+it.toIssue+' шт</div></div></div>'+
         '<div class="line-grid"><div class="field"><label>Выдаём сейчас</label><input type="number" value="'+it.toIssue+'" min="0" max="'+it.toIssue+'" data-max="'+it.toIssue+'" data-line-id="'+it.lineId+'" class="issueQtyInput"></div>'+
         '<div class="field"><label>Уже выдано</label><input type="text" readonly value="'+it.issued+'"></div></div></div>';
     }).join('')+'</div>';
@@ -1035,7 +1037,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     var returnable = items.filter(function(it){ return it.returnable > 0; });
     if(!returnable.length){ slot.innerHTML = '<p class="field-hint">По этому заказу возвращать нечего.</p>'; return; }
     slot.innerHTML = '<div class="lines-list">'+returnable.map(function(it){
-      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(it.sku,(it.name||'?').charAt(0).toUpperCase())+' '+it.name+'</div><div class="line-sub">Выдано: '+it.issued+' · Уже возвращено: '+it.returned+'</div></div></div>'+
+      return '<div class="line-card"><div class="line-top"><div><div class="line-name">'+skuTag(it.sku,(it.name||'?').charAt(0).toUpperCase())+' '+esc(it.name)+'</div><div class="line-sub">Выдано: '+it.issued+' · Уже возвращено: '+it.returned+'</div></div></div>'+
         '<div class="line-grid"><div class="field"><label>Возврат сейчас</label><input type="number" value="0" min="0" max="'+it.returnable+'" data-max="'+it.returnable+'" data-line-id="'+it.lineId+'" class="returnQtyInput"></div></div></div>';
     }).join('')+'</div>';
   }
@@ -1074,7 +1076,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       var byId = {}; clients.forEach(function(c){ byId[c.id]=c.name; });
       if(!sel) return;
       if(!orders.length){ sel.innerHTML = '<option value="">Нет заказов с долгом</option>'; return; }
-      sel.innerHTML = orders.map(function(o){ return '<option value="'+o.id+'" data-debt="'+o.debt+'">№'+o.id+' · '+(byId[o.clientId]||o.clientId)+' · долг '+fmt(o.debt)+'</option>'; }).join('');
+      sel.innerHTML = orders.map(function(o){ return '<option value="'+esc(o.id)+'" data-debt="'+o.debt+'">№'+esc(o.id)+' · '+esc(byId[o.clientId]||o.clientId)+' · долг '+fmt(o.debt)+'</option>'; }).join('');
       if(amt) amt.value = orders[0].debt;
       sel.addEventListener('change', function(){
         var opt = sel.selectedOptions[0];
@@ -1123,7 +1125,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
         var byId = {}; clients.forEach(function(c){ byId[c.id]=c.name; });
         if(!sel) return;
         if(!orders.length){ sel.innerHTML = '<option value="">Нет заказов с суммой к возврату</option>'; return; }
-        sel.innerHTML = orders.map(function(o){ return '<option value="'+o.id+'" data-refundable="'+o.refundable+'">№'+o.id+' · '+(byId[o.clientId]||o.clientId)+' · к возврату '+fmt(o.refundable)+'</option>'; }).join('');
+        sel.innerHTML = orders.map(function(o){ return '<option value="'+esc(o.id)+'" data-refundable="'+o.refundable+'">№'+esc(o.id)+' · '+esc(byId[o.clientId]||o.clientId)+' · к возврату '+fmt(o.refundable)+'</option>'; }).join('');
         function sync(){
           var opt = sel.selectedOptions[0], amt = area.querySelector('#refundAmountInput'), hint = area.querySelector('#refundableHint');
           if(!opt) return;
@@ -1165,7 +1167,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       var wrap = document.getElementById('katalogResults');
       if(!wrap) return;
       if(!filtered.length){ wrap.innerHTML = emptyState('Ничего не найдено', 'Попробуйте изменить запрос или очистить поиск'); return; }
-      var body = filtered.map(function(r){ return '<tr data-pid="'+esc(r[6])+'"><td>'+skuTag(r[0],r[1])+'</td><td>'+r[2]+'</td><td>'+r[3]+'</td><td class="num">'+fmt(r[4])+'</td><td class="num">'+r[5]+'</td><td>'+(r[5]>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</td></tr>'; }).join('');
+      var body = filtered.map(function(r){ return '<tr data-pid="'+esc(r[6])+'"><td>'+skuTag(r[0],r[1])+'</td><td>'+esc(r[2])+'</td><td>'+esc(r[3])+'</td><td class="num">'+fmt(r[4])+'</td><td class="num">'+r[5]+'</td><td>'+(r[5]>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</td></tr>'; }).join('');
       wrap.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>SKU</th><th>Название</th><th>Категория</th><th>Цена</th><th>Доступно</th><th>Статус</th></tr></thead><tbody>'+body+'</tbody></table></div>';
       wrap.querySelectorAll('tr[data-pid]').forEach(function(tr){
         tr.addEventListener('click', function(){ if(byId[tr.dataset.pid]) openProductCard(byId[tr.dataset.pid]); });
@@ -1195,7 +1197,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       '<div class="pcard-grip"></div>'+
       (p.photo ? '<img class="pcard-photo" src="'+esc(p.photo)+'" alt="'+esc(p.name)+'">' : ph)+
       '<h2>'+esc(p.name)+'</h2>'+
-      '<div class="pcard-meta">'+skuTag(esc(p.sku), esc(letter))+(p.category ? '<span>'+esc(p.category)+'</span>' : '')+
+      '<div class="pcard-meta">'+skuTag(p.sku, letter)+(p.category ? '<span>'+esc(p.category)+'</span>' : '')+
         (qty>0?'<span class="pill open">В наличии</span>':'<span class="pill partial">Под заказ</span>')+'</div>'+
       '<div class="pcard-grid">'+
         '<div class="pcard-stat"><div class="l">Цена в шоуруме</div><div class="v">'+fmt(Number(p.price)||0)+' сум</div></div>'+
@@ -1420,7 +1422,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       var body = clients.map(function(c){
         var cOrders = orders.filter(function(o){ return o.clientId === c.id; });
         var hist = cOrders.length ? (cOrders.length+' '+(cOrders.length===1?'заказ':'заказа(ов)')+(cOrders.some(function(o){return o.debt>0;}) ? ' · есть долг' : '')) : 'заказов пока нет';
-        return '<tr><td>'+c.name+'</td><td>'+(c.phone||'—')+'</td><td>'+hist+'</td></tr>';
+        return '<tr><td>'+esc(c.name)+'</td><td>'+esc(c.phone||'—')+'</td><td>'+hist+'</td></tr>';
       }).join('');
       area.innerHTML = '<div class="table-wrap"><table class="lines"><thead><tr><th>Клиент</th><th>Телефон</th><th>История</th></tr></thead><tbody>'+body+'</tbody></table></div>';
     }).catch(function(e){
@@ -1984,7 +1986,7 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     var filtered = !q ? idx.slice(0,8) : idx.filter(function(r){ return r.t.toLowerCase().indexOf(q)>-1 || r.s.toLowerCase().indexOf(q)>-1; }).slice(0,20);
     if(!filtered.length){ searchResults.innerHTML = '<div class="search-empty">Ничего не найдено</div>'; return; }
     searchResults.innerHTML = filtered.map(function(r,i){
-      return '<button type="button" class="search-result" data-i="'+i+'"><span class="ic">'+r.ic+'</span><span><span class="t" style="display:block">'+r.t+'</span><span class="s">'+r.s+'</span></span></button>';
+      return '<button type="button" class="search-result" data-i="'+i+'"><span class="ic">'+esc(r.ic)+'</span><span><span class="t" style="display:block">'+esc(r.t)+'</span><span class="s">'+esc(r.s)+'</span></span></button>';
     }).join('');
     searchResults.querySelectorAll('.search-result').forEach(function(btn,i){
       btn.addEventListener('click', function(){ filtered[i].go(); closeSearch(); });
