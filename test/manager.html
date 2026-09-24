@@ -391,6 +391,16 @@
     .pb-sign{display:flex;gap:24pt;margin-top:28pt;font-size:10pt}
     .pb-sign div{flex:1;border-top:.5pt solid #000;padding-top:3pt}
     .pb-foot{margin-top:14pt;font-size:8.5pt;color:#444;text-align:center}
+    /* Ценник товара: на А4 — карточка 90×60 мм с рамкой для вырезания, на узкой ленте — во всю ширину */
+    .pt{width:90mm;min-height:60mm;box-sizing:border-box;border:.75pt dashed #000;padding:5mm 6mm;display:flex;flex-direction:column;gap:2mm;page-break-inside:avoid;break-inside:avoid}
+    .pt-brand{display:flex;justify-content:space-between;align-items:baseline;gap:4mm;font:700 9pt/1 'Sora',Arial,sans-serif;letter-spacing:.08em;border-bottom:.75pt solid #000;padding-bottom:1.5mm}
+    .pt-brand span{font:400 7pt/1 'Public Sans',Arial,sans-serif;letter-spacing:0}
+    .pt-name{font:700 13pt/1.2 'Sora',Arial,sans-serif;margin-top:1mm;overflow-wrap:anywhere}
+    .pt-meta{font-size:8pt;color:#333}
+    .pt-price{margin-top:auto;font:800 24pt/1.05 'Sora',Arial,sans-serif;white-space:nowrap}
+    .pt-price small{font-size:12pt;font-weight:700}
+    .pt-l{font-size:7.5pt;text-transform:uppercase;letter-spacing:.05em;color:#333}
+    .pt-alt{font-size:9pt;border-top:.5pt solid #999;padding-top:1.5mm}
   }
   /* Узкая бумага (чековый принтер 58/80 мм): компактнее, без колонки №, подписи столбиком */
   @media print and (max-width:100mm){
@@ -404,6 +414,9 @@
     .pb-tot{width:100%;min-width:0}
     .pb-tot .big{font-size:9.5pt}
     .pb-sign{flex-direction:column;gap:18pt;margin-top:18pt}
+    .pt{width:100%;min-height:0;border:none;padding:1mm 0}
+    .pt-name{font-size:11pt}
+    .pt-price{font-size:18pt;margin-top:2mm}
   }
 
   :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
@@ -1145,10 +1158,12 @@
         '<div class="pcard-stat"><div class="l">Цена на заказ</div><div class="v">'+fmt(p.orderPrice === undefined || p.orderPrice === '' || p.orderPrice === null ? (Number(p.price)||0) : (Number(p.orderPrice)||0))+' сум</div></div>'+
         '<div class="pcard-stat"><div class="l">В наличии</div><div class="v">'+fmt(qty)+' шт.</div></div>'+
       '</div>'+
-      '<button class="ghost" type="button" id="pcardBack">← Назад к каталогу</button>';
+      '<div style="display:flex;gap:10px;flex-wrap:wrap"><button class="ghost" type="button" id="pcardBack">← Назад к каталогу</button>'+
+      '<button class="ghost" type="button" id="pcardPrint" style="display:inline-flex;align-items:center;gap:6px">'+PRINT_ICON.replace('<svg ','<svg width="15" height="15" ')+'Печать ценника</button></div>';
     var img = document.querySelector('#pcard .pcard-photo');
     if(img) img.addEventListener('error', function(){ img.outerHTML = ph; });
     document.getElementById('pcardBack').addEventListener('click', closeProductCard);
+    document.getElementById('pcardPrint').addEventListener('click', function(){ printPriceTag(p); });
     pcardOverlay.setAttribute('data-open','true');
   }
   function closeProductCard(){ pcardOverlay.setAttribute('data-open','false'); }
@@ -1201,6 +1216,23 @@
       if(btn) btn.dataset.loading = 'false';
       alert('Не удалось подготовить бланк: ' + (e && e.message || e));
     });
+  }
+  /* ---- Ценник из карточки товара: название, SKU, категория, цена «в шоуруме» крупно, «на заказ» — если отличается ---- */
+  function priceTagHtml(p){
+    var price = Number(p.price)||0;
+    var hasOrder = !(p.orderPrice === undefined || p.orderPrice === '' || p.orderPrice === null);
+    var orderPrice = hasOrder ? (Number(p.orderPrice)||0) : price;
+    return '<div class="pt">'+
+      '<div class="pt-brand">DASS HOME<span>'+esc(new Date().toLocaleDateString('ru-RU'))+'</span></div>'+
+      '<div class="pt-name">'+esc(p.name||p.sku)+'</div>'+
+      '<div class="pt-meta">Арт. '+esc(p.sku)+(p.category ? ' · '+esc(p.category) : '')+'</div>'+
+      '<div class="pt-price"><div class="pt-l">'+(orderPrice !== price ? 'Цена в шоуруме' : 'Цена')+'</div>'+fmt(price)+' <small>сум</small></div>'+
+      (orderPrice !== price ? '<div class="pt-alt">На заказ: <b>'+fmt(orderPrice)+' сум</b></div>' : '')+
+    '</div>';
+  }
+  function printPriceTag(p){
+    document.getElementById('receiptPrintArea').innerHTML = priceTagHtml(p);
+    window.print();
   }
   window.addEventListener('afterprint', function(){ document.getElementById('receiptPrintArea').innerHTML = ''; });
   document.addEventListener('click', function(e){
