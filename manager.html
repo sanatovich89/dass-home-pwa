@@ -730,9 +730,13 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
         '<div class="field"><label>Количество</label><input type="number" id="lineQtyInput" value="1" min="1"></div></div>'+
         '<button type="button" class="link-btn" id="addLineBtn">+ Добавить товар в заказ</button>'+
       '</div>'+
-      '<div class="grid-2"><div class="field has-suffix"><label>Оплата сейчас</label><div class="input-wrap"><input type="number" id="payNowInput" value="0"><span class="suffix">сум</span></div></div>'+
-      '<div class="field"><label>Плановая дата выдачи</label><input type="date" id="plannedDateInput"></div></div>'+
-      '<div class="summary"><div class="summary-row"><span>Итого по заказу</span><span class="v" id="sumTotal">0</span></div>'+
+      '<div class="grid-2"><div class="field has-suffix"><label>Скидка на заказ</label><div class="input-wrap"><input type="number" id="discountInput" value="0" min="0"><span class="suffix">сум</span></div>'+
+        '<span class="field-hint" id="discountHint"></span></div>'+
+      '<div class="field has-suffix"><label>Оплата сейчас</label><div class="input-wrap"><input type="number" id="payNowInput" value="0"><span class="suffix">сум</span></div></div></div>'+
+      '<div class="field"><label>Плановая дата выдачи</label><input type="date" id="plannedDateInput"></div>'+
+      '<div class="summary"><div class="summary-row"><span>Сумма заказа</span><span class="v" id="sumGross">0</span></div>'+
+      '<div class="summary-row"><span>Скидка</span><span class="v" id="sumDiscount">0</span></div>'+
+      '<div class="summary-row"><span>Итого по заказу</span><span class="v" id="sumTotal">0</span></div>'+
       '<div class="summary-row"><span>Оплачено сейчас</span><span class="v" id="sumPaid">0</span></div>'+
       '<div class="summary-row total debt"><span>Остаток долга</span><span class="v" id="sumDebt">0</span></div></div>'+
       '<div class="field"><label>Комментарий</label><textarea id="commentInput" placeholder="Комментарий к заказу"></textarea></div></div>';
@@ -778,10 +782,17 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
       });
     }
   }
+  /* Скидка на весь заказ — суммой в сум; сервер раскладывает её по строкам. */
+  function orderDiscount(area){ return Math.max(0, Math.round(Number((area.querySelector('#discountInput')||{}).value) || 0)); }
   function renderOrderSummary(area){
-    var total = newOrderState.lines.reduce(function(s,l){ return s + l.price*l.qty; }, 0);
+    var gross = newOrderState.lines.reduce(function(s,l){ return s + l.price*l.qty; }, 0);
+    var discount = orderDiscount(area), total = Math.max(0, gross - discount);
     var payNow = Number((area.querySelector('#payNowInput')||{}).value) || 0;
     var totalEl = area.querySelector('#sumTotal'), paidEl = area.querySelector('#sumPaid'), debtEl = area.querySelector('#sumDebt');
+    var grossEl = area.querySelector('#sumGross'), discEl = area.querySelector('#sumDiscount'), hintEl = area.querySelector('#discountHint');
+    if(grossEl) grossEl.textContent = fmt(gross);
+    if(discEl) discEl.textContent = discount > 0 ? '−'+fmt(discount) : '0';
+    if(hintEl) hintEl.textContent = discount > 0 && gross > 0 ? (discount >= gross ? 'Скидка должна быть меньше суммы заказа' : '≈ '+(Math.round(discount/gross*1000)/10)+'% от суммы заказа') : '';
     if(totalEl) totalEl.textContent = fmt(total);
     if(paidEl) paidEl.textContent = fmt(payNow);
     if(debtEl) debtEl.textContent = fmt(Math.max(0, total-payNow));
@@ -822,6 +833,8 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
     }
     var payNowInp = area.querySelector('#payNowInput');
     if(payNowInp) payNowInp.addEventListener('input', function(){ renderOrderSummary(area); });
+    var discountInp = area.querySelector('#discountInput');
+    if(discountInp) discountInp.addEventListener('input', function(){ renderOrderSummary(area); });
   }
 
   TEMPLATES['zakaz-edit'] = function(){
@@ -1522,7 +1535,13 @@ try { if (window.top === window) location.replace('./'); } catch (e) {}</script>
         if(!parts[0]) return { error: 'Укажите клиента.' };
         payload.client_name = parts[0]; if(parts[1]) payload.phone = parts[1];
       }
+      var gross = newOrderState.lines.reduce(function(s,l){ return s + l.price*l.qty; }, 0);
+      var discount = orderDiscount(area);
+      if(discount >= gross) return { error: 'Скидка должна быть меньше суммы заказа ('+fmt(gross)+' сум).' };
+      if(discount > 0) payload.discount = discount;
       var payNow = Number((area.querySelector('#payNowInput')||{}).value) || 0;
+      if(payNow < 0) return { error: 'Оплата не может быть отрицательной.' };
+      if(payNow > gross - discount) return { error: 'Оплата больше итога по заказу ('+fmt(gross - discount)+' сум).' };
       return { payload: payload, payNow: payNow };
     }
     if(key==='kassa-priem'){
