@@ -114,7 +114,7 @@
   var API_BASE = IS_TEST
     ? 'https://script.google.com/macros/s/AKfycbz36SRB8Pm5XvEpjTjnim6RgVeB2Ek4R25s0Bz-Lb7DIhYvnlq1TKCx0ARNB34JWIjN-w/exec'
     : 'https://script.google.com/macros/s/AKfycbxJWwv2rbycjNHdILaqaw6w6qZDChHmqk-JtaA8t3SmAEaTsQUV_BbS2Yar9-ahut8/exec';
-  var PAGES = { owner: 'owner.html', manager: 'manager.html' };
+  var PAGES = { owner: 'owner.html', manager: 'manager.html', investor: 'owner.html' };
   var STORAGE_KEY = IS_TEST ? 'dass_home_session_test' : 'dass_home_session';
   if (IS_TEST) {
     document.title = 'DASS HOME · ТЕСТ';
@@ -164,7 +164,7 @@
     loginView.hidden = true;
     appView.hidden = false;
     var page = PAGES[session.role] || 'owner.html';
-    var src = page + '?token=' + encodeURIComponent(session.token) + '&name=' + encodeURIComponent(session.name || '') + '&login=' + encodeURIComponent(session.login || '') + (IS_TEST ? '&env=test' : '');
+    var src = page + '?token=' + encodeURIComponent(session.token) + '&name=' + encodeURIComponent(session.name || '') + '&login=' + encodeURIComponent(session.login || '') + '&role=' + encodeURIComponent(session.role || '') + (IS_TEST ? '&env=test' : '');
     loading.setAttribute('data-show', 'true');
     frame.setAttribute('data-src', src);
     frame.src = src;

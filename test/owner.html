@@ -69,6 +69,7 @@
   .bc-mini .v{font:700 15px/1.2 'Sora',sans-serif;color:var(--hero-text)}
 
   .mode-switch-lite{display:flex;gap:6px;background:var(--surface-2);border:1px solid var(--border-soft);border-radius:999px;padding:4px;margin:16px 22px 0}
+  .investor .mode-switch-lite,.investor #panelActions,.investor #drawerProvesti,.investor #drawerClear,.investor #kpiPending{display:none!important}
   .hero-mode-btn{flex:1;min-height:44px;border:none;background:transparent;padding:9px 14px;border-radius:999px;font:700 12.5px/1 'Sora',sans-serif;color:var(--text-muted);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:7px}
   .hero-mode-btn svg{width:14px;height:14px}
   .hero-mode-btn[aria-current="true"]{background:var(--accent);color:var(--accent-contrast)}
@@ -516,6 +517,8 @@
   var API_BASE = /[?&]env=test(&|$)/.test(location.search)
     ? 'https://script.google.com/macros/s/AKfycbz36SRB8Pm5XvEpjTjnim6RgVeB2Ek4R25s0Bz-Lb7DIhYvnlq1TKCx0ARNB34JWIjN-w/exec'   /* тестовый контур */
     : 'https://script.google.com/macros/s/AKfycbxJWwv2rbycjNHdILaqaw6w6qZDChHmqk-JtaA8t3SmAEaTsQUV_BbS2Yar9-ahut8/exec';
+  var IS_INVESTOR = /[?&]role=investor(&|$)/.test(location.search);
+  if(IS_INVESTOR) document.documentElement.classList.add('investor');
   var AUTH = (function(){
     var m = /[?&]token=([^&]+)/.exec(location.search);
     return {
@@ -706,7 +709,9 @@
     {id:'kassa', title:'Касса', short:'Касса', hint:'Движения основной кассы: приход и расход по статьям.',
       submodes:[{id:'prihod', label:'Приход'}, {id:'rashod', label:'Расход'}]},
     {id:'spravochnik', title:'Справочник', short:'Справочник', hint:'Склады, поставщики, сотрудники, инвесторы.',
-      submodes:[{id:'new', label:'Создать'}, {id:'edit', label:'Изменить'}]}
+      submodes:[{id:'new', label:'Создать'}, {id:'edit', label:'Изменить'}]},
+    {id:'polzovateli', title:'Пользователи', short:'Доступ', hint:'Кто входит на сайт: логин, пароль, роль. Пароли хранятся только в зашифрованном виде.',
+      submodes:null}
   ];
 
 
@@ -1219,8 +1224,7 @@
     {id:'zakupki', title:'Закупки', short:'Закупки', hint:'Открытые, частичные и закрытые заказы поставщикам.'},
     {id:'deficit', title:'Дефицит', short:'Дефицит', hint:'Что нужно заказать поставщику прямо сейчас.'},
     {id:'kassy', title:'Кассы', short:'Кассы', hint:'Основная касса и кассы менеджеров, последние движения.'},
-    {id:'spravochnik-info', title:'Справочник', short:'Справочник', hint:'Склады, поставщики, сотрудники и инвесторы одним списком.'},
-    {id:'polzovateli', title:'Пользователи', short:'Доступ', hint:'Кто входит на сайт: логин, пароль, роль. Пароли хранятся только в зашифрованном виде.'}
+    {id:'spravochnik-info', title:'Справочник', short:'Справочник', hint:'Склады, поставщики, сотрудники и инвесторы одним списком.'}
   ];
 
   function renderKatalog(){
@@ -1413,14 +1417,14 @@
   }
 
   /* ============ ПОЛЬЗОВАТЕЛИ (вход на сайт) ============ */
-  var USER_ROLE_LABEL = {owner:'Владелец', manager:'Менеджер'};
+  var USER_ROLE_LABEL = {owner:'Владелец', manager:'Менеджер', investor:'Инвестор'};
   function fmtDateTime(iso){
     if(!iso) return '—';
     var d = new Date(iso); if(isNaN(d)) return esc(iso);
     return d.toLocaleString('ru-RU', {day:'2-digit', month:'2-digit', year:'2-digit', hour:'2-digit', minute:'2-digit'});
   }
   function renderPolzovateli(){
-    var area = document.getElementById('infoArea');
+    var area = document.getElementById('formArea');
     area.innerHTML = skeletonHtml(4);
     apiGet('users').then(function(users){
       function statusPill(u){
@@ -1454,7 +1458,7 @@
     box.innerHTML = '<div class="product-card" style="margin-bottom:16px"><h3 style="margin:0 0 12px">'+(isNew?'Новый пользователь':'Пользователь '+esc(u.login))+'</h3>'+
       '<div class="grid-2"><div class="field"><label>Логин <span class="req">*</span></label><input type="text" id="ufLogin" autocomplete="off" autocapitalize="none" value="'+esc(u.login)+'"'+(isNew?' placeholder="например, aziz"':' disabled')+'></div>'+
       '<div class="field"><label>Имя <span class="req">*</span></label><input type="text" id="ufName" value="'+esc(u.name)+'" placeholder="Как показывать в заказах"></div></div>'+
-      '<div class="grid-2"><div class="field"><label>Роль</label><select id="ufRole"'+(lockSelf?' disabled':'')+'><option value="manager"'+(u.role==='manager'?' selected':'')+'>Менеджер</option><option value="owner"'+(u.role==='owner'?' selected':'')+'>Владелец</option></select></div>'+
+      '<div class="grid-2"><div class="field"><label>Роль</label><select id="ufRole"'+(lockSelf?' disabled':'')+'><option value="manager"'+(u.role==='manager'?' selected':'')+'>Менеджер</option><option value="investor"'+(u.role==='investor'?' selected':'')+'>Инвестор — только просмотр</option><option value="owner"'+(u.role==='owner'?' selected':'')+'>Владелец</option></select></div>'+
       '<div class="field"><label>Доступ</label><select id="ufActive"'+(lockSelf?' disabled':'')+'><option value="1"'+(u.active?' selected':'')+'>Активен — может входить</option><option value="0"'+(u.active?'':' selected')+'>Отключён</option></select></div></div>'+
       '<div class="field"><label>'+(isNew?'Пароль <span class="req">*</span>':'Новый пароль')+'</label><input type="text" id="ufPassword" autocomplete="new-password" autocapitalize="none" placeholder="'+(isNew?'не короче 6 символов':'пусто — оставить прежний')+'">'+
       '<div class="field-hint">Пароль виден, пока вы его вводите, — передайте его сотруднику. После сохранения узнать его нельзя, только задать новый.</div></div>'+
@@ -1481,7 +1485,7 @@
     });
   }
 
-  var INFO_RENDERERS = {katalog:renderKatalog, ostatki:renderOstatki, zakazy:renderZakazy, zakupki:renderZakupki, deficit:renderDeficit, kassy:renderKassy, 'spravochnik-info':renderSpravochnikInfo, polzovateli:renderPolzovateli};
+  var INFO_RENDERERS = {katalog:renderKatalog, ostatki:renderOstatki, zakazy:renderZakazy, zakupki:renderZakupki, deficit:renderDeficit, kassy:renderKassy, 'spravochnik-info':renderSpravochnikInfo};
 
   /* ============ STATE + SHARED RENDER ============ */
   var state = { mode:'ops', opsNavId:'sklad', opsSubmode:'prihod', infoNavId:'katalog' };
@@ -1489,6 +1493,7 @@
   function findNav(list, id){ for(var i=0;i<list.length;i++){ if(list[i].id===id) return list[i]; } return list[0]; }
 
   function setMode(mode){
+    if(IS_INVESTOR) mode = 'info';   /* инвестор — только просмотр */
     state.mode = mode;
     document.querySelectorAll('.hero-mode-btn').forEach(function(b){ b.setAttribute('aria-current', b.dataset.mode===mode ? 'true':'false'); });
     var crumbModeEl = document.getElementById('crumbMode');
@@ -1580,6 +1585,9 @@
     var area = document.getElementById('formArea');
     area.innerHTML = skeletonHtml(4);
     resetStatus();
+    /* «Доступ» — своя форма со своей кнопкой «Сохранить», общая «Провести» не нужна. */
+    document.getElementById('panelActions').hidden = state.mode!=='ops' || item.id==='polzovateli';
+    if(item.id==='polzovateli'){ setTimeout(renderPolzovateli, 150); return; }
     setTimeout(function(){
       var key = opsKey();
       var tpl = TEMPLATES[key];
@@ -2025,7 +2033,7 @@
   var searchOverlay = document.getElementById('searchOverlay'), searchInput = document.getElementById('searchInput'), searchResults = document.getElementById('searchResults');
   function buildSearchIndex(){
     var idx = [];
-    NAV_OPS.forEach(function(n){ idx.push({t:n.title, s:'Раздел операций', ic:n.short.charAt(0), go:function(){ setMode('ops'); selectOpsNav(n.id); } }); });
+    if(!IS_INVESTOR) NAV_OPS.forEach(function(n){ idx.push({t:n.title, s:'Раздел операций', ic:n.short.charAt(0), go:function(){ setMode('ops'); selectOpsNav(n.id); } }); });
     NAV_INFO.forEach(function(n){ idx.push({t:n.title, s:'Информация', ic:n.short.charAt(0), go:function(){ setMode('info'); selectInfoNav(n.id); } }); });
     (API_CACHE._catalogData || []).forEach(function(p){
       var letter=(p.name||'?').charAt(0).toUpperCase();
